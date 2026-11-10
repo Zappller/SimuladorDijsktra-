@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação: Rota Dijkstra (Aracaju ➔ UFS)</title>
+    <!-- Leaflet CSS & JS Oficiais (CDN cdnjs) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e2e8f0;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* Animação SVG nativa para a linha de rota */
+        .rota-animada {
+            stroke-dasharray: 12, 12;
+            animation: dashRota 1.2s linear infinite;
+        }
+        @keyframes dashRota {
+            to { stroke-dashoffset: -24; }
+        }
+        /* HUD Flutuante */
+        .hud-painel {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.96);
+            color: #f8fafc;
+            padding: 20px 24px;
+            border-radius: 14px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            min-width: 330px;
+            max-width: 420px;
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+        }
+        .hud-titulo {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hud-metricas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .hud-caixa {
+            background: rgba(255,255,255,0.06);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .hud-caixa .label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .hud-caixa .valor {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4ade80;
+            margin-top: 2px;
+        }
+        .hud-controles {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .hud-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hud-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .hud-btn-reset {
+            background: #475569;
+        }
+        .hud-btn-reset:hover {
+            background: #334155;
+        }
+        .hud-select {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        .hud-progresso {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin-top: 14px;
+            overflow: hidden;
+        }
+        .hud-barra {
+            width: 0%;
+            height: 100%;
+            background: #38bdf8;
+            transition: width 0.15s ease-out;
+        }
+        .car-marker {
+            font-size: 30px;
+            line-height: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+            transition: transform 0.1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="hud-painel">
+        <div class="hud-titulo">
+            <span>🚗 SIMULAÇÃO: DIJKSTRA</span>
+            <span style="font-size: 13px; color: #94a3b8;">9.17 km</span>
+        </div>
+        
+        <div class="hud-metricas">
+            <div class="hud-caixa">
+                <div class="label">Distância Percorrida</div>
+                <div class="valor" id="dist-atual">0.00 km</div>
+            </div>
+            <div class="hud-caixa">
+                <div class="label">Tempo Estimado</div>
+                <div class="valor" id="tempo-atual">10.5 min</div>
+            </div>
+            <div class="hud-caixa" style="grid-column: span 2;">
+                <div class="label">Via Atual</div>
+                <div class="valor" id="via-atual" style="font-size: 13px; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Clique em Iniciar para começar...
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-controles">
+            <button class="hud-btn" id="btn-play">▶️ Iniciar</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <select class="hud-select" id="sel-vel">
+                <option value="1">1x</option>
+                <option value="3" selected>3x</option>
+                <option value="8">8x</option>
+                <option value="15">15x</option>
+            </select>
+        </div>
+
+        <div class="hud-progresso">
+            <div class="hud-barra" id="hud-barra"></div>
+        </div>
+    </div>
+
+    <script>
+        var coords = [[-10.9080939, -37.0515262], [-10.9080634, -37.0525895], [-10.9080567, -37.0536152], [-10.9080424, -37.0548907], [-10.9080131, -37.0559428], [-10.9079983, -37.057506], [-10.9079854, -37.0582484], [-10.9079589, -37.0596213], [-10.907934, -37.0609711], [-10.9079008, -37.0620852], [-10.9079021, -37.0622696], [-10.9080495, -37.0623537], [-10.9099356, -37.0636882], [-10.9104894, -37.0639215], [-10.9104553, -37.065574], [-10.9104157, -37.0663396], [-10.9104018, -37.0665856], [-10.9103926, -37.0666561], [-10.9103745, -37.0667679], [-10.9114668, -37.0670714], [-10.9126332, -37.0674025], [-10.9137113, -37.0677285], [-10.9148188, -37.0681033], [-10.9159328, -37.0685022], [-10.916471, -37.0686811], [-10.9170364, -37.0688879], [-10.9186939, -37.069479], [-10.9186492, -37.0700249], [-10.918516, -37.0711973], [-10.9184024, -37.0722099], [-10.918295, -37.0734065], [-10.9183269, -37.0746423], [-10.9183703, -37.0757633], [-10.918468, -37.0776872], [-10.9185217, -37.0789298], [-10.9185609, -37.0798703], [-10.9185959, -37.0808195], [-10.9186299, -37.0815472], [-10.9188063, -37.083804], [-10.9199127, -37.0876772], [-10.9202814, -37.0893854], [-10.9202662, -37.0894251], [-10.9204434, -37.0897809], [-10.9204898, -37.0897779], [-10.9212093, -37.1046562], [-10.9211576, -37.1047994], [-10.9213855, -37.1051535], [-10.92215, -37.1051746], [-10.9237292, -37.1051243], [-10.9242188, -37.1051109], [-10.9252468, -37.1050639], [-10.9254025, -37.1050599], [-10.9276142, -37.1055749], [-10.9277399, -37.1061526], [-10.9278495, -37.1066864], [-10.927861, -37.1067356], [-10.9280009, -37.1072687], [-10.9281366, -37.107812], [-10.9282397, -37.108359], [-10.9292688, -37.1097509], [-10.9295892, -37.1101495], [-10.9296152, -37.1101819], [-10.9298027, -37.1103913], [-10.9298739, -37.110474], [-10.9302963, -37.1104324], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
+        var vias = ["Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Mamede Paes Mendon\u00e7a", "Avenida Engenheiro Gentil Tavares", "Avenida Engenheiro Gentil Tavares", "Avenida Engenheiro Gentil Tavares", "Rua S\u00e3o Crist\u00f3v\u00e3o", "Rua S\u00e3o Crist\u00f3v\u00e3o", "Rua S\u00e3o Crist\u00f3v\u00e3o", "Rua Santa Catarina", "Rua Santa Catarina", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho", "Avenida Marechal C\u00e2ndido Mariano da Silva Rondon", "Via sem nome", "Via sem nome", "Via sem nome", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Via sem nome", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas"];
+        var totalDistKm = 9.1748796257314;
+        var totalTempoMin = 10.478578533720912;
+
+        // 1. Inicializar Mapa Leaflet
+        var map = L.map('map', {
+            center: [-10.918763237142857, -37.08363513142857],
+            zoom: 13,
+            zoomControl: true
+        });
+
+        // 2. Camadas de Mapa Base (Sem erro 403 do OpenStreetMap)
+        var mapaRuas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Street Map'
+        }).addTo(map);
+
+        var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Satellite'
+        });
+
+        var mapaCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; CARTO'
+        });
+
+        L.control.layers({
+            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
+            "🛰️ Imagem de Satélite": mapaSatelite,
+            "🏙️ Mapa Carto": mapaCarto
+        }, null, { position: 'topright' }).addTo(map);
+
+        // 3. Traçado da Rota com Classe CSS Animada
+        var polyline = L.polyline(coords, {
+            color: '#2563eb',
+            weight: 6,
+            opacity: 0.9,
+            className: 'rota-animada'
+        }).addTo(map);
+
+        map.fitBounds(polyline.getBounds(), { padding: [60, 60] });
+
+        // 4. Marcador Origem (Ponto A)
+        var iconOrigem = L.divIcon({
+            className: 'custom-pin',
+            html: '<div style="background:#22c55e; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">A</div>',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+        });
+        L.marker(coords[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Ponto A (Origem):</b><br>Centro Histórico (Praça Fausto Cardoso / Palácio)');
+
+        // 5. Marcador Destino (UFS)
+        var iconDestino = L.divIcon({
+            className: 'custom-pin',
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">🎓</div>',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+        });
+        L.marker(coords[coords.length - 1], { icon: iconDestino }).addTo(map).bindPopup('<b>Destino:</b><br>Universidade Federal de Sergipe (UFS - São Cristóvão)');
+
+        // 6. Veículo Animado (Emoji de Carro com Rotação)
+        var carIcon = L.divIcon({
+            className: 'car-marker',
+            html: '<div id="car-emoji">🚗</div>',
+            iconSize: [32, 32],
+            iconAnchor: [16, 16]
+        });
+        var carMarker = L.marker(coords[0], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
+
+        // 7. Lógica de Simulação e Controle de Reprodução
+        var currentIndex = 0;
+        var isRunning = false;
+        var timerId = null;
+
+        var btnPlay = document.getElementById('btn-play');
+        var btnReset = document.getElementById('btn-reset');
+        var selVel = document.getElementById('sel-vel');
+        var distAtual = document.getElementById('dist-atual');
+        var viaAtual = document.getElementById('via-atual');
+        var hudBarra = document.getElementById('hud-barra');
+
+        function step() {
+            if (!isRunning) return;
+
+            if (currentIndex < coords.length - 1) {
+                currentIndex++;
+                var pAtual = coords[currentIndex];
+                carMarker.setLatLng(pAtual);
+
+                var pct = (currentIndex / (coords.length - 1)) * 100;
+                hudBarra.style.width = pct + '%';
+
+                var dKm = (currentIndex / (coords.length - 1)) * totalDistKm;
+                distAtual.innerText = dKm.toFixed(2) + ' km';
+
+                if (currentIndex - 1 < vias.length) {
+                    viaAtual.innerText = vias[currentIndex - 1];
+                }
+
+                var velMult = parseFloat(selVel.value);
+                var delayMs = Math.max(25, 260 / velMult);
+                timerId = setTimeout(step, delayMs);
+            } else {
+                isRunning = false;
+                btnPlay.innerText = '▶️ Reiniciar';
+                viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
+                hudBarra.style.width = '100%';
+            }
+        }
+
+        btnPlay.onclick = function() {
+            if (isRunning) {
+                isRunning = false;
+                clearTimeout(timerId);
+                btnPlay.innerText = '▶️ Continuar';
+            } else {
+                if (currentIndex >= coords.length - 1) {
+                    currentIndex = 0;
+                }
+                isRunning = true;
+                btnPlay.innerText = '⏸️ Pausar';
+                step();
+            }
+        };
+
+        btnReset.onclick = function() {
+            isRunning = false;
+            clearTimeout(timerId);
+            currentIndex = 0;
+            carMarker.setLatLng(coords[0]);
+            hudBarra.style.width = '0%';
+            distAtual.innerText = '0.00 km';
+            viaAtual.innerText = 'Iniciando trajeto...';
+            btnPlay.innerText = '▶️ Iniciar';
+        };
+    </script>
+</body>
+</html>
