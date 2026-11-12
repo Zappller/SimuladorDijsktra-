@@ -69,11 +69,11 @@ def main():
     # 5. Gerar Simulação Visual Interativa (HTML + Leaflet + HUD)
     print("\n[*] Gerando simulação interativa no mapa de Aracaju...")
     arquivo_html = "simulacao_dijkstra.html"
-    gu.gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_html)
+    gu.gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_html, coord_origem=coords_origem)
 
     # 6. Gerar Gráficos com Matplotlib
     arquivo_png = "simulacao_dijkstra.png"
-    gu.plotar_grafico_dijkstra(G, caminho, metricas, nome_origem, arquivo_png)
+    gu.plotar_grafico_dijkstra(G, caminho, metricas, nome_origem, arquivo_png, coord_origem=coords_origem)
 
     # 7. Abrir no navegador padrão
     caminho_abs = os.path.abspath(arquivo_html)

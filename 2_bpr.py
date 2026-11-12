@@ -101,7 +101,7 @@ def main():
     # 7. Gerar Simulação Visual Interativa (HTML + Leaflet + Corrida de Veículos)
     print("\n[*] Gerando simulação interativa com corrida de dois veículos em tempo real...")
     arquivo_html = "simulacao_bpr.html"
-    gu.gerar_simulacao_bpr_html(G, caminho_dijk, metricas_dijk, caminho_bpr, metricas_bpr, nome_origem, arquivo_html)
+    gu.gerar_simulacao_bpr_html(G, caminho_dijk, metricas_dijk, caminho_bpr, metricas_bpr, nome_origem, arquivo_html, coord_origem=coords_origem)
 
     # 8. Gerar Gráfico Estático com Matplotlib
     arquivo_png = "simulacao_bpr.png"

@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação BPR vs Dijkstra (Aracaju ➔ UFS)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e2e8f0;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .rota-bpr-animada {
+            stroke-dasharray: 12, 12;
+            animation: dashBpr 1s linear infinite;
+        }
+        @keyframes dashBpr {
+            to { stroke-dashoffset: -24; }
+        }
+        .hud-painel {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.96);
+            color: #f8fafc;
+            padding: 20px 24px;
+            border-radius: 14px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            min-width: 380px;
+            max-width: 460px;
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+        }
+        .hud-titulo {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #38bdf8;
+        }
+        .card-rota {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        .card-dijkstra {
+            background: rgba(239, 68, 68, 0.15);
+            border-left: 4px solid #ef4444;
+        }
+        .card-bpr {
+            background: rgba(56, 189, 248, 0.18);
+            border-left: 4px solid #38bdf8;
+        }
+        .hud-controles {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 14px;
+        }
+        .hud-btn {
+            background: #22c55e;
+            color: #fff;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        .hud-btn:hover { background: #16a34a; }
+        .hud-btn-reset { background: #475569; }
+        .hud-btn-reset:hover { background: #334155; }
+        .hud-select {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .legenda-trafego {
+            font-size: 11px;
+            color: #cbd5e1;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+        /* Badges de Estado Semafórico */
+        .car-marker-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            margin-left: -70px;
+            margin-top: -42px;
+            pointer-events: none;
+        }
+        .car-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+        .badge-green {
+            background: #16a34a;
+            border: 1px solid #4ade80;
+        }
+        .badge-yellow {
+            background: #d97706;
+            border: 1px solid #fde047;
+        }
+        .badge-red {
+            background: #dc2626;
+            border: 1px solid #f87171;
+            animation: pulseRed 0.6s infinite alternate;
+        }
+        @keyframes pulseRed {
+            from { transform: scale(1); box-shadow: 0 0 5px #ef4444; }
+            to { transform: scale(1.08); box-shadow: 0 0 14px #ef4444; }
+        }
+        .car-icon-body {
+            font-size: 28px;
+            line-height: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="hud-painel">
+        <div class="hud-titulo">🏎️ SIMULAÇÃO DE TRÁFEGO: BPR vs DIJKSTRA</div>
+        
+        <div class="card-rota card-dijkstra">
+            <div>
+                <b>🚗 Dijkstra Clássico</b><br>
+                <small>9.21 km | 🛑 7 semáforos</small><br>
+                <span id="status-dijk" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
+            </div>
+            <div style="text-align: right; color: #ef4444; font-weight: 700; font-size: 15px;">
+                16.7 min
+            </div>
+        </div>
+
+        <div class="card-rota card-bpr">
+            <div>
+                <b>🚙 Rota BPR (Adaptativa)</b> 🏆<br>
+                <small>9.95 km | 🛑 9 semáforos</small><br>
+                <span id="status-bpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
+            </div>
+            <div style="text-align: right; color: #38bdf8; font-weight: 700; font-size: 15px;">
+                15.9 min
+            </div>
+        </div>
+
+        <div class="legenda-trafego">
+            <span>Trânsito:</span>
+            <span><span class="dot" style="background:#22c55e;"></span> Livre</span>
+            <span><span class="dot" style="background:#eab308;"></span> Médio</span>
+            <span><span class="dot" style="background:#ef4444;"></span> Congestionado</span>
+        </div>
+
+        <div class="hud-controles">
+            <button class="hud-btn" id="btn-play">▶️ Iniciar Corrida</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <select class="hud-select" id="sel-vel">
+                <option value="1">1x</option>
+                <option value="3" selected>3x</option>
+                <option value="8">8x</option>
+            </select>
+        </div>
+    </div>
+
+    <script>
+        var coordsDijk = [[-10.912801995116695, -37.049147372805464], [-10.9127998, -37.0479697], [-10.9128726, -37.04789], [-10.9137538, -37.0478554], [-10.9138006, -37.049209], [-10.9138454, -37.050322], [-10.9138925, -37.0516186], [-10.9139303, -37.0527351], [-10.913942, -37.053887], [-10.9139652, -37.0550086], [-10.9139674, -37.0551336], [-10.9139915, -37.0561474], [-10.9140301, -37.0574365], [-10.9140388, -37.0585532], [-10.9141929, -37.0585605], [-10.9143962, -37.0596996], [-10.9150271, -37.0597021], [-10.9161246, -37.0597086], [-10.9161369, -37.0608524], [-10.9161255, -37.0618603], [-10.9161161, -37.0624341], [-10.9172159, -37.0630834], [-10.9174398, -37.0632973], [-10.9186006, -37.0642673], [-10.9186094, -37.0645361], [-10.9186072, -37.0647208], [-10.9186127, -37.064863], [-10.9186196, -37.0653451], [-10.9186407, -37.0661337], [-10.9186604, -37.0669585], [-10.9186817, -37.067705], [-10.9186822, -37.0678015], [-10.9186915, -37.0684669], [-10.918696, -37.0693284], [-10.9186939, -37.069479], [-10.9186492, -37.0700249], [-10.918516, -37.0711973], [-10.9184024, -37.0722099], [-10.918295, -37.0734065], [-10.9183269, -37.0746423], [-10.9183703, -37.0757633], [-10.918468, -37.0776872], [-10.9185217, -37.0789298], [-10.9185609, -37.0798703], [-10.9185959, -37.0808195], [-10.9186299, -37.0815472], [-10.9188063, -37.083804], [-10.9199127, -37.0876772], [-10.9202814, -37.0893854], [-10.9202662, -37.0894251], [-10.9204434, -37.0897809], [-10.9204898, -37.0897779], [-10.9212093, -37.1046562], [-10.9211576, -37.1047994], [-10.9213855, -37.1051535], [-10.92215, -37.1051746], [-10.9237292, -37.1051243], [-10.9242188, -37.1051109], [-10.9252468, -37.1050639], [-10.9254025, -37.1050599], [-10.9276142, -37.1055749], [-10.9277399, -37.1061526], [-10.9278495, -37.1066864], [-10.927861, -37.1067356], [-10.9280009, -37.1072687], [-10.9281366, -37.107812], [-10.9282397, -37.108359], [-10.9292688, -37.1097509], [-10.9295892, -37.1101495], [-10.9296152, -37.1101819], [-10.9298027, -37.1103913], [-10.9298739, -37.110474], [-10.9302963, -37.1104324], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
+        var coordsBpr = [[-10.912801995116695, -37.049147372805464], [-10.9127998, -37.0479697], [-10.9128726, -37.04789], [-10.9137538, -37.0478554], [-10.9138006, -37.049209], [-10.9138454, -37.050322], [-10.9127484, -37.0503351], [-10.9104966, -37.0503449], [-10.9104973, -37.0515535], [-10.9104959, -37.0526734], [-10.9105062, -37.0537913], [-10.9105306, -37.0549226], [-10.9105155, -37.056033], [-10.9105257, -37.0574564], [-10.9105387, -37.0584042], [-10.9105323, -37.0596333], [-10.9105259, -37.0608964], [-10.9105019, -37.0619923], [-10.9104894, -37.0631772], [-10.9104834, -37.0637693], [-10.9104894, -37.0639215], [-10.9104553, -37.065574], [-10.9104157, -37.0663396], [-10.9104018, -37.0665856], [-10.9103926, -37.0666561], [-10.9103745, -37.0667679], [-10.9114668, -37.0670714], [-10.9126332, -37.0674025], [-10.9137113, -37.0677285], [-10.9148188, -37.0681033], [-10.9159328, -37.0685022], [-10.916471, -37.0686811], [-10.9170364, -37.0688879], [-10.9186939, -37.069479], [-10.9186492, -37.0700249], [-10.918516, -37.0711973], [-10.9184024, -37.0722099], [-10.918295, -37.0734065], [-10.9183269, -37.0746423], [-10.9183703, -37.0757633], [-10.918468, -37.0776872], [-10.9185217, -37.0789298], [-10.9185609, -37.0798703], [-10.9185959, -37.0808195], [-10.9186299, -37.0815472], [-10.9188063, -37.083804], [-10.9199127, -37.0876772], [-10.9202814, -37.0893854], [-10.9202662, -37.0894251], [-10.9204434, -37.0897809], [-10.9204898, -37.0897779], [-10.9212093, -37.1046562], [-10.9211576, -37.1047994], [-10.9213855, -37.1051535], [-10.92215, -37.1051746], [-10.9221678, -37.1057395], [-10.9242501, -37.1056904], [-10.9254122, -37.1056498], [-10.925422, -37.106227], [-10.925456, -37.1067973], [-10.9278495, -37.1066864], [-10.927861, -37.1067356], [-10.9280009, -37.1072687], [-10.9281366, -37.107812], [-10.9282397, -37.108359], [-10.9292688, -37.1097509], [-10.9295892, -37.1101495], [-10.9296152, -37.1101819], [-10.9298027, -37.1103913], [-10.9298739, -37.110474], [-10.9302963, -37.1104324], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.928553, -37.1078481], [-10.9284044, -37.1074829], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
+        var segmentos = [{"coords": [[-10.9474658, -37.0729589], [-10.9475568, -37.0731548]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Via sem nome"}, {"coords": [[-10.9474658, -37.0729589], [-10.949025, -37.0714245]], "cor": "#ef4444", "peso": 5.5, "vc": 1.42, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9471238, -37.0733009], [-10.9474658, -37.0729589]], "cor": "#ef4444", "peso": 5.5, "vc": 1.8, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9307954, -37.0611133], [-10.9314729, -37.0613506]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9372949, -37.0653767], [-10.9376537, -37.0669397]], "cor": "#eab308", "peso": 3.5, "vc": 0.81, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9367883, -37.0686811], [-10.9366277, -37.0690469]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.960356, -37.0546583], [-10.9569629, -37.0536963]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9349414, -37.0752976], [-10.9338791, -37.0749019]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9349414, -37.0752976], [-10.9349116, -37.075443]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Via sem nome"}, {"coords": [[-10.9326589, -37.0744546], [-10.93201, -37.0742289]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9314852, -37.0740329], [-10.9301183, -37.0735314]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9603445, -37.0548663], [-10.9608802, -37.0549268]], "cor": "#f97316", "peso": 4.5, "vc": 1.22, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9603445, -37.0548663], [-10.960356, -37.0546583]], "cor": "#ef4444", "peso": 5.5, "vc": 1.33, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9471242, -37.0731277], [-10.9471543, -37.0730037]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Via sem nome"}, {"coords": [[-10.9471242, -37.0731277], [-10.9457621, -37.0744526]], "cor": "#ef4444", "peso": 5.5, "vc": 1.72, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9474948, -37.0727869], [-10.9471242, -37.0731277]], "cor": "#ef4444", "peso": 5.5, "vc": 1.48, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9170364, -37.0688879], [-10.9186939, -37.069479]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9088084, -37.0480539], [-10.90932, -37.0480147]], "cor": "#f97316", "peso": 4.5, "vc": 1.25, "nome": "Avenida Rio Branco"}, {"coords": [[-10.907753, -37.0480791], [-10.9088084, -37.0480539]], "cor": "#f97316", "peso": 4.5, "vc": 1.23, "nome": "Avenida Otoniel D\u00f3rea"}, {"coords": [[-10.919706, -37.0573139], [-10.9185433, -37.0573472]], "cor": "#f97316", "peso": 4.5, "vc": 1.3, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9290037, -37.0602118], [-10.9281444, -37.0596428]], "cor": "#ef4444", "peso": 5.5, "vc": 1.58, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9063869, -37.0575271], [-10.9063044, -37.055895]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Avenida Coelho e Campos"}, {"coords": [[-10.9063869, -37.0575271], [-10.906816, -37.0575204]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9063869, -37.0575271], [-10.9062686, -37.0575398]], "cor": "#f97316", "peso": 4.5, "vc": 1.1, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9184759, -37.0757888], [-10.9184194, -37.0746551]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9191707, -37.0853222], [-10.9189713, -37.0839571]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9187566, -37.0808959], [-10.9187046, -37.0797782]], "cor": "#ef4444", "peso": 5.5, "vc": 1.4, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9187046, -37.0797782], [-10.9186479, -37.0788682]], "cor": "#f97316", "peso": 4.5, "vc": 1.07, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9074797, -37.0937192], [-10.9076173, -37.0927995]], "cor": "#f97316", "peso": 4.5, "vc": 1.25, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9076173, -37.0927995], [-10.9077654, -37.0915915]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9076173, -37.0927995], [-10.9089862, -37.0910273]], "cor": "#ef4444", "peso": 5.5, "vc": 1.39, "nome": "Via sem nome"}, {"coords": [[-10.9089862, -37.0910273], [-10.9097684, -37.0908]], "cor": "#ef4444", "peso": 5.5, "vc": 1.45, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9191971, -37.0847447], [-10.9191707, -37.0853222]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Acesso Avenida Doutor Jose da Silva Ribeiro Filho"}, {"coords": [[-10.9191971, -37.0847447], [-10.9207743, -37.0833022]], "cor": "#ef4444", "peso": 5.5, "vc": 1.52, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9202046, -37.0700665], [-10.9230068, -37.0710928]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9076323, -37.0914608], [-10.9074968, -37.0911413]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Via sem nome"}, {"coords": [[-10.9076323, -37.0914608], [-10.907375, -37.0935908]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9192283, -37.0696934], [-10.9202046, -37.0700665]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9081217, -37.0911004], [-10.9074678, -37.0910206]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida 31 de Mar\u00e7o"}, {"coords": [[-10.9077101, -37.0907346], [-10.9076323, -37.0914608]], "cor": "#eab308", "peso": 3.5, "vc": 0.93, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9080657, -37.0912311], [-10.9089862, -37.0910273]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Avenida 31 de Mar\u00e7o"}, {"coords": [[-10.9080657, -37.0912311], [-10.9077654, -37.0915915]], "cor": "#f97316", "peso": 4.5, "vc": 1.24, "nome": "Via sem nome"}, {"coords": [[-10.9077654, -37.0915915], [-10.9078727, -37.0907438]], "cor": "#ef4444", "peso": 5.5, "vc": 1.32, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9078727, -37.0907438], [-10.9080544, -37.0896612]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9078727, -37.0907438], [-10.9081217, -37.0911004]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Via sem nome"}, {"coords": [[-10.9242112, -37.0713681], [-10.923529, -37.0711178]], "cor": "#eab308", "peso": 3.5, "vc": 0.89, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9281155, -37.0682419], [-10.9276852, -37.06986]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Gon\u00e7alo Rollemberg Leite"}, {"coords": [[-10.9343276, -37.062504], [-10.9348793, -37.0628192]], "cor": "#f97316", "peso": 4.5, "vc": 1.24, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9354261, -37.0506206], [-10.9351868, -37.0511584]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.935329, -37.0503791], [-10.9355581, -37.0504173]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.935329, -37.0503791], [-10.9354261, -37.0506206]], "cor": "#ef4444", "peso": 5.5, "vc": 1.41, "nome": "Via sem nome"}, {"coords": [[-10.9340379, -37.0498842], [-10.935329, -37.0503791]], "cor": "#ef4444", "peso": 5.5, "vc": 1.37, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9246977, -37.04427], [-10.9253827, -37.0440325]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9378365, -37.0635359], [-10.9387061, -37.0636628]], "cor": "#ef4444", "peso": 5.5, "vc": 1.6, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9378365, -37.0635359], [-10.9382181, -37.0630628]], "cor": "#eab308", "peso": 3.5, "vc": 0.85, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9471543, -37.0730037], [-10.9473032, -37.073238]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Via sem nome"}, {"coords": [[-10.947445, -37.0733706], [-10.9476643, -37.0732434]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Via sem nome"}, {"coords": [[-10.947445, -37.0733706], [-10.9480371, -37.0738736]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva"}, {"coords": [[-10.9627498, -37.0775458], [-10.9630138, -37.0776746]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva"}, {"coords": [[-10.962339, -37.0413937], [-10.9615589, -37.0417731]], "cor": "#ef4444", "peso": 5.5, "vc": 1.39, "nome": "Avenida M\u00e1rio Jorge Menezes Vieira"}, {"coords": [[-10.9560638, -37.0442435], [-10.954152, -37.0448966]], "cor": "#ef4444", "peso": 5.5, "vc": 1.34, "nome": "Avenida M\u00e1rio Jorge Menezes Vieira"}, {"coords": [[-10.9459675, -37.0456812], [-10.944448, -37.0464644]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Delmiro Golveia"}, {"coords": [[-10.9366277, -37.0690469], [-10.9365506, -37.0692408]], "cor": "#eab308", "peso": 3.5, "vc": 0.77, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9205431, -37.0833464], [-10.9196125, -37.084218]], "cor": "#ef4444", "peso": 5.5, "vc": 1.55, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9205431, -37.0833464], [-10.9188634, -37.0827847]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Via sem nome"}, {"coords": [[-10.922869, -37.0812821], [-10.9205431, -37.0833464]], "cor": "#ef4444", "peso": 5.5, "vc": 1.78, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9257822, -37.0721135], [-10.9262955, -37.0729716]], "cor": "#eab308", "peso": 3.5, "vc": 0.81, "nome": "Via sem nome"}, {"coords": [[-10.9257822, -37.0721135], [-10.9266145, -37.0724155]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9172075, -37.0473055], [-10.9183589, -37.0468058]], "cor": "#ef4444", "peso": 5.5, "vc": 1.61, "nome": "Avenida Ivo do Prado"}, {"coords": [[-10.9398402, -37.0579845], [-10.9401404, -37.058472]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9398402, -37.0579845], [-10.9399337, -37.0587962]], "cor": "#eab308", "peso": 3.5, "vc": 0.8, "nome": "Via sem nome"}, {"coords": [[-10.9379625, -37.0553197], [-10.9383595, -37.0556898]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9278939, -37.0695361], [-10.9279393, -37.0693664]], "cor": "#f97316", "peso": 4.5, "vc": 1.11, "nome": "Avenida Gon\u00e7alo Rollemberg Leite"}, {"coords": [[-10.9279393, -37.0693664], [-10.9284733, -37.0674567]], "cor": "#eab308", "peso": 3.5, "vc": 0.8, "nome": "Avenida Gon\u00e7alo Rollemberg Leite"}, {"coords": [[-10.9301183, -37.0735314], [-10.9297993, -37.0734253]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9376063, -37.0628415], [-10.9362725, -37.0628194]], "cor": "#ef4444", "peso": 5.5, "vc": 1.41, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9376063, -37.0628415], [-10.937343, -37.0633107]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.938257, -37.0625051], [-10.9399486, -37.059021]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9423339, -37.0564743], [-10.9420597, -37.0567568]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9472087, -37.0728073], [-10.9466858, -37.0721297]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9472087, -37.0728073], [-10.9474948, -37.0727869]], "cor": "#f97316", "peso": 4.5, "vc": 1.06, "nome": "Via sem nome"}, {"coords": [[-10.9461572, -37.0714914], [-10.9446237, -37.0697196]], "cor": "#ef4444", "peso": 5.5, "vc": 1.55, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9446237, -37.0697196], [-10.9443673, -37.0694344]], "cor": "#f97316", "peso": 4.5, "vc": 1.28, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9327817, -37.0617892], [-10.9328891, -37.0618267]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9262955, -37.0729716], [-10.9265761, -37.0731118]], "cor": "#eab308", "peso": 3.5, "vc": 1.0, "nome": "Via sem nome"}, {"coords": [[-10.9262955, -37.0729716], [-10.9259674, -37.0745119]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Rua Poeta Jos\u00e9 Sampaio"}, {"coords": [[-10.9265761, -37.0731118], [-10.9266276, -37.0727452]], "cor": "#eab308", "peso": 3.5, "vc": 0.95, "nome": "Rua Poeta Jos\u00e9 Sampaio"}, {"coords": [[-10.9266276, -37.0727452], [-10.9267371, -37.0724602]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Rua Poeta Jos\u00e9 Sampaio"}, {"coords": [[-10.923529, -37.0711178], [-10.9230445, -37.0709496]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9254347, -37.0718127], [-10.9248092, -37.0715922]], "cor": "#f97316", "peso": 4.5, "vc": 1.07, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9259674, -37.0745119], [-10.9256551, -37.0757582]], "cor": "#eab308", "peso": 3.5, "vc": 0.72, "nome": "Rua Poeta Jos\u00e9 Sampaio"}, {"coords": [[-10.9260199, -37.0720385], [-10.9254347, -37.0718127]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9295613, -37.0635192], [-10.9296149, -37.0633316]], "cor": "#eab308", "peso": 3.5, "vc": 0.85, "nome": "Avenida Gon\u00e7alo Rollemberg Leite"}, {"coords": [[-10.9348793, -37.0628192], [-10.9363205, -37.0629593]], "cor": "#f97316", "peso": 4.5, "vc": 1.21, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9372811, -37.0640463], [-10.9372363, -37.0646317]], "cor": "#eab308", "peso": 3.5, "vc": 0.93, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9387061, -37.0636628], [-10.9421649, -37.0670705]], "cor": "#eab308", "peso": 3.5, "vc": 0.98, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9389634, -37.0635479], [-10.9387061, -37.0636628]], "cor": "#f97316", "peso": 4.5, "vc": 1.0, "nome": "Via sem nome"}, {"coords": [[-10.9389634, -37.0635479], [-10.9382181, -37.0630628]], "cor": "#f97316", "peso": 4.5, "vc": 1.1, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9381064, -37.0623638], [-10.938257, -37.0625051]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Via sem nome"}, {"coords": [[-10.9381064, -37.0623638], [-10.9376063, -37.0628415]], "cor": "#eab308", "peso": 3.5, "vc": 0.83, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9376537, -37.0669397], [-10.937713, -37.0674835]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9372232, -37.0650139], [-10.9372949, -37.0653767]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9372008, -37.0680407], [-10.9367962, -37.0686677]], "cor": "#eab308", "peso": 3.5, "vc": 0.74, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9365506, -37.0692408], [-10.9360151, -37.0707902]], "cor": "#eab308", "peso": 3.5, "vc": 0.89, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.937713, -37.0674835], [-10.9372008, -37.0680407]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9363205, -37.0629593], [-10.937343, -37.0633107]], "cor": "#f97316", "peso": 4.5, "vc": 1.19, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9372363, -37.0646317], [-10.9372232, -37.0650139]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9338791, -37.0749019], [-10.9328543, -37.0745202]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9354685, -37.0730668], [-10.9352161, -37.0742005]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.93201, -37.0742289], [-10.9314852, -37.0740329]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9352161, -37.0742005], [-10.9349414, -37.0752976]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Avenida Padre Nestor Sampaio"}, {"coords": [[-10.9279359, -37.0727356], [-10.9267934, -37.0723365]], "cor": "#f97316", "peso": 4.5, "vc": 1.1, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9080544, -37.0896612], [-10.9084033, -37.0872237]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9074968, -37.0911413], [-10.9080657, -37.0912311]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Avenida 31 de Mar\u00e7o"}, {"coords": [[-10.9207743, -37.0833022], [-10.9236871, -37.0810065]], "cor": "#ef4444", "peso": 5.5, "vc": 1.98, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.919893, -37.0872849], [-10.9207743, -37.0833022]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Via sem nome"}, {"coords": [[-10.919893, -37.0872849], [-10.9191707, -37.0853222]], "cor": "#ef4444", "peso": 5.5, "vc": 1.46, "nome": "Avenida Marechal C\u00e2ndido Mariano da Silva Rondon"}, {"coords": [[-10.9196125, -37.084218], [-10.9181117, -37.0855648]], "cor": "#ef4444", "peso": 5.5, "vc": 1.51, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9189713, -37.0839571], [-10.9196125, -37.084218]], "cor": "#ef4444", "peso": 5.5, "vc": 1.35, "nome": "Via sem nome"}, {"coords": [[-10.9189713, -37.0839571], [-10.9188634, -37.0827847]], "cor": "#ef4444", "peso": 5.5, "vc": 1.34, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.907375, -37.0935908], [-10.9073236, -37.0939917]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9067304, -37.0906544], [-10.907375, -37.0935908]], "cor": "#ef4444", "peso": 5.5, "vc": 1.41, "nome": "Via sem nome"}, {"coords": [[-10.9067304, -37.0906544], [-10.9074968, -37.0911413]], "cor": "#f97316", "peso": 4.5, "vc": 1.24, "nome": "Avenida Alcides Fontes"}, {"coords": [[-10.9062655, -37.0900805], [-10.9067304, -37.0906544]], "cor": "#f97316", "peso": 4.5, "vc": 1.28, "nome": "Avenida Alcides Fontes"}, {"coords": [[-10.9207315, -37.089518], [-10.9206624, -37.0893596]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Via sem nome"}, {"coords": [[-10.9204434, -37.0897809], [-10.9204898, -37.0897779]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Via sem nome"}, {"coords": [[-10.9206624, -37.0893596], [-10.9202814, -37.0893854]], "cor": "#ef4444", "peso": 5.5, "vc": 1.41, "nome": "Via sem nome"}, {"coords": [[-10.9206624, -37.0893596], [-10.919893, -37.0872849]], "cor": "#ef4444", "peso": 5.5, "vc": 1.47, "nome": "Avenida Marechal C\u00e2ndido Mariano da Silva Rondon"}, {"coords": [[-10.9202662, -37.0894251], [-10.9204434, -37.0897809]], "cor": "#f97316", "peso": 4.5, "vc": 1.19, "nome": "Via sem nome"}, {"coords": [[-10.9202662, -37.0894251], [-10.9156736, -37.0937498]], "cor": "#eab308", "peso": 3.5, "vc": 0.93, "nome": "Avenida Doutor Carlos Rodrigues da Cruz"}, {"coords": [[-10.9074678, -37.0910206], [-10.9077101, -37.0907346]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Via sem nome"}, {"coords": [[-10.9074678, -37.0910206], [-10.9065283, -37.0901318]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida Alcides Fontes"}, {"coords": [[-10.909026, -37.0908873], [-10.9086813, -37.0908429]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Via sem nome"}, {"coords": [[-10.909026, -37.0908873], [-10.9081217, -37.0911004]], "cor": "#ef4444", "peso": 5.5, "vc": 1.35, "nome": "Avenida 31 de Mar\u00e7o"}, {"coords": [[-10.9480371, -37.0738736], [-10.9507958, -37.0752302]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Prefeito Her\u00e1clito Gon\u00e7alo Rollemberg"}, {"coords": [[-10.9465452, -37.0721695], [-10.9471543, -37.0730037]], "cor": "#f97316", "peso": 4.5, "vc": 1.07, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9465452, -37.0721695], [-10.946322, -37.07383]], "cor": "#ef4444", "peso": 5.5, "vc": 1.36, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9485422, -37.071723], [-10.9474948, -37.0727869]], "cor": "#ef4444", "peso": 5.5, "vc": 1.59, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9485422, -37.071723], [-10.9479765, -37.0721501]], "cor": "#ef4444", "peso": 5.5, "vc": 1.31, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9466858, -37.0721297], [-10.9461572, -37.0714914]], "cor": "#eab308", "peso": 3.5, "vc": 1.0, "nome": "Avenida Ad\u00e9lia Franco"}, {"coords": [[-10.9481644, -37.0735353], [-10.9476643, -37.0732434]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva"}, {"coords": [[-10.9481644, -37.0735353], [-10.9480716, -37.0724925]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva"}, {"coords": [[-10.9475568, -37.0731548], [-10.9472087, -37.0728073]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Via sem nome"}, {"coords": [[-10.9243533, -37.0805596], [-10.9253865, -37.0769213]], "cor": "#eab308", "peso": 3.5, "vc": 0.77, "nome": "Avenida Professor Jos\u00e9 Olino de Lima Neto"}, {"coords": [[-10.9243533, -37.0805596], [-10.9235462, -37.0809053]], "cor": "#ef4444", "peso": 5.5, "vc": 1.77, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9473032, -37.073238], [-10.9471238, -37.0733009]], "cor": "#ef4444", "peso": 5.5, "vc": 1.32, "nome": "Via sem nome"}, {"coords": [[-10.9473032, -37.073238], [-10.947445, -37.0733706]], "cor": "#eab308", "peso": 3.5, "vc": 0.82, "nome": "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva"}, {"coords": [[-10.9395814, -37.0508997], [-10.9402346, -37.0509457]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9428969, -37.0511019], [-10.943974, -37.0511576]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9548466, -37.0535293], [-10.9547793, -37.0536845]], "cor": "#ef4444", "peso": 5.5, "vc": 1.82, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9547793, -37.0536845], [-10.9545357, -37.0540332]], "cor": "#ef4444", "peso": 5.5, "vc": 1.67, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9525273, -37.0581387], [-10.9523956, -37.0588146]], "cor": "#ef4444", "peso": 5.5, "vc": 1.86, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.9208347, -37.0574164], [-10.9219537, -37.0573937]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9219577, -37.0572831], [-10.9208266, -37.0573032]], "cor": "#ef4444", "peso": 5.5, "vc": 1.33, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9230415, -37.0585053], [-10.9230382, -37.0596981]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Doutor Edelzio Vieira de Melo"}, {"coords": [[-10.9229522, -37.0709164], [-10.9218076, -37.0704862]], "cor": "#eab308", "peso": 3.5, "vc": 0.98, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9229522, -37.0709164], [-10.9230068, -37.0710928]], "cor": "#f97316", "peso": 4.5, "vc": 1.0, "nome": "Avenida Ed\u00e9sio Vieira de Melo"}, {"coords": [[-10.9219537, -37.0573937], [-10.9230541, -37.0573811]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9208266, -37.0573032], [-10.919706, -37.0573139]], "cor": "#ef4444", "peso": 5.5, "vc": 1.44, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9312564, -37.0594529], [-10.9310359, -37.0597905]], "cor": "#eab308", "peso": 3.5, "vc": 0.9, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9315736, -37.0589661], [-10.9312564, -37.0594529]], "cor": "#eab308", "peso": 3.5, "vc": 0.81, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9299849, -37.0606385], [-10.9290037, -37.0602118]], "cor": "#f97316", "peso": 4.5, "vc": 1.27, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9305492, -37.0604744], [-10.9307135, -37.0607441]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Via sem nome"}, {"coords": [[-10.9305492, -37.0604744], [-10.9299849, -37.0606385]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Via sem nome"}, {"coords": [[-10.9310359, -37.0597905], [-10.9306288, -37.0603643]], "cor": "#eab308", "peso": 3.5, "vc": 0.82, "nome": "Via sem nome"}, {"coords": [[-10.9310359, -37.0597905], [-10.9299084, -37.0620968]], "cor": "#eab308", "peso": 3.5, "vc": 0.79, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9299084, -37.0620968], [-10.929578, -37.0630334]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Avenida Gon\u00e7alo Rollemberg Leite"}, {"coords": [[-10.9302015, -37.0610261], [-10.9299084, -37.0620968]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Via sem nome"}, {"coords": [[-10.9300692, -37.0608236], [-10.9307954, -37.0611133]], "cor": "#f97316", "peso": 4.5, "vc": 1.1, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9300692, -37.0608236], [-10.9302015, -37.0610261]], "cor": "#f97316", "peso": 4.5, "vc": 1.13, "nome": "Via sem nome"}, {"coords": [[-10.9308425, -37.060997], [-10.9299849, -37.0606385]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9308425, -37.060997], [-10.9307135, -37.0607441]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Via sem nome"}, {"coords": [[-10.9307135, -37.0607441], [-10.931192, -37.0597389]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Via sem nome"}, {"coords": [[-10.931192, -37.0597389], [-10.9313516, -37.0595124]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9305307, -37.0611793], [-10.9307954, -37.0611133]], "cor": "#eab308", "peso": 3.5, "vc": 0.95, "nome": "Via sem nome"}, {"coords": [[-10.9305307, -37.0611793], [-10.9302015, -37.0610261]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Via sem nome"}, {"coords": [[-10.9328024, -37.0616706], [-10.9318086, -37.0613349]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9316703, -37.0590373], [-10.9319727, -37.0585592]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9186006, -37.0642673], [-10.9186094, -37.0645361]], "cor": "#ef4444", "peso": 5.5, "vc": 1.6, "nome": "Avenida Desembargador Maynard"}, {"coords": [[-10.9333347, -37.0618462], [-10.9328024, -37.0616706]], "cor": "#f97316", "peso": 4.5, "vc": 1.18, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9251691, -37.0572549], [-10.9243372, -37.0572576]], "cor": "#ef4444", "peso": 5.5, "vc": 1.39, "nome": "Avenida Hermes Fontes"}, {"coords": [[-10.9358261, -37.0504461], [-10.9377894, -37.0506949]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9383595, -37.0556898], [-10.9384049, -37.0557314]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9364542, -37.054904], [-10.9366589, -37.0549455]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9347233, -37.054564], [-10.9352744, -37.054674]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9313516, -37.0595124], [-10.9316703, -37.0590373]], "cor": "#eab308", "peso": 3.5, "vc": 0.83, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9330711, -37.0561344], [-10.9333334, -37.0555675]], "cor": "#eab308", "peso": 3.5, "vc": 0.81, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9333334, -37.0555675], [-10.9335982, -37.0549737]], "cor": "#eab308", "peso": 3.5, "vc": 0.89, "nome": "Avenida Francisco Porto"}, {"coords": [[-10.9358827, -37.0547953], [-10.9362593, -37.0548691]], "cor": "#eab308", "peso": 3.5, "vc": 0.85, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9428336, -37.056377], [-10.9429243, -37.0563554]], "cor": "#eab308", "peso": 3.5, "vc": 0.74, "nome": "Rotat\u00f3ria da Avenida Jornalista Santos Santana"}, {"coords": [[-10.9426966, -37.0561715], [-10.9428336, -37.056377]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Rotat\u00f3ria da Avenida Jornalista Santos Santana"}, {"coords": [[-10.9426966, -37.0561715], [-10.9423339, -37.0564743]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9442137, -37.0514727], [-10.9441643, -37.0511554]], "cor": "#ef4444", "peso": 5.5, "vc": 1.43, "nome": "Acesso \u00e0 Avenida Beira Mar"}, {"coords": [[-10.9442137, -37.0514727], [-10.9445139, -37.051154]], "cor": "#ef4444", "peso": 5.5, "vc": 1.33, "nome": "Via sem nome"}, {"coords": [[-10.943974, -37.0511576], [-10.9441643, -37.0511554]], "cor": "#f97316", "peso": 4.5, "vc": 1.23, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.943974, -37.0511576], [-10.9439609, -37.0520005]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Avenida Jornalista Santos Santana"}, {"coords": [[-10.9428342, -37.0559118], [-10.9426966, -37.0561715]], "cor": "#f97316", "peso": 4.5, "vc": 1.0, "nome": "Rotat\u00f3ria da Avenida Jornalista Santos Santana"}, {"coords": [[-10.9420597, -37.0567568], [-10.9405579, -37.0581064]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9406116, -37.0581713], [-10.9419502, -37.0570155]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9400831, -37.0579932], [-10.9395801, -37.0572013]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Deputado Pedro Valadares"}, {"coords": [[-10.9405579, -37.0581064], [-10.9400831, -37.0579932]], "cor": "#f97316", "peso": 4.5, "vc": 1.13, "nome": "Via sem nome"}, {"coords": [[-10.9405579, -37.0581064], [-10.9402948, -37.0583225]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Deputado S\u00edlvio Teixeira"}, {"coords": [[-10.9311913, -37.0473405], [-10.9312661, -37.04743]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9311913, -37.0473405], [-10.9312925, -37.047249]], "cor": "#ef4444", "peso": 5.5, "vc": 1.34, "nome": "Via sem nome"}, {"coords": [[-10.9308214, -37.0469012], [-10.9308794, -37.0472213]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Via sem nome"}, {"coords": [[-10.9308214, -37.0469012], [-10.9309755, -37.047091]], "cor": "#ef4444", "peso": 5.5, "vc": 1.33, "nome": "Avenida Paulo Barreto de Menezes"}, {"coords": [[-10.9104018, -37.0665856], [-10.9103926, -37.0666561]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Rua Santa Catarina"}, {"coords": [[-10.9104018, -37.0665856], [-10.9096595, -37.0661477]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9095518, -37.0733106], [-10.9093543, -37.0745656]], "cor": "#f97316", "peso": 4.5, "vc": 1.11, "nome": "Rua Maximiano Geraldo de Almeida"}, {"coords": [[-10.9095518, -37.0733106], [-10.9083982, -37.0731135]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Rua Acre"}, {"coords": [[-10.9093543, -37.0745656], [-10.9099799, -37.0750345]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Rua Para\u00edba"}, {"coords": [[-10.9163211, -37.0743486], [-10.9151761, -37.0741837]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Rua Acre"}, {"coords": [[-10.9151761, -37.0741837], [-10.9140607, -37.0740415]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Rua Acre"}, {"coords": [[-10.9140607, -37.0740415], [-10.9129098, -37.0738605]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Rua Acre"}, {"coords": [[-10.9129098, -37.0738605], [-10.9117852, -37.0736875]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Rua Acre"}, {"coords": [[-10.9117852, -37.0736875], [-10.9106613, -37.0735124]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Rua Acre"}, {"coords": [[-10.917395, -37.0744988], [-10.9183269, -37.0746423]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Rua Acre"}, {"coords": [[-10.917395, -37.0744988], [-10.9163211, -37.0743486]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Rua Acre"}, {"coords": [[-10.9133707, -37.0704407], [-10.9144742, -37.0706016]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Rua Bahia"}, {"coords": [[-10.9083982, -37.0731135], [-10.9073039, -37.0728868]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Rua Acre"}, {"coords": [[-10.9101341, -37.0753126], [-10.9104512, -37.0750776]], "cor": "#eab308", "peso": 3.5, "vc": 0.9, "nome": "Via sem nome"}, {"coords": [[-10.9126332, -37.0674025], [-10.9137113, -37.0677285]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9092818, -37.0806934], [-10.9094175, -37.0796554]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9114053, -37.064234], [-10.9126817, -37.0643421]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9114053, -37.064234], [-10.9114033, -37.0641013]], "cor": "#eab308", "peso": 3.5, "vc": 0.86, "nome": "Rua Laranjeiras"}, {"coords": [[-10.9114768, -37.06695], [-10.9114548, -37.0658699]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Rua Laranjeiras"}, {"coords": [[-10.9114768, -37.06695], [-10.9104018, -37.0665856]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9114668, -37.0670714], [-10.9114768, -37.06695]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Via sem nome"}, {"coords": [[-10.9114668, -37.0670714], [-10.9126332, -37.0674025]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9084965, -37.0865453], [-10.9089013, -37.0835245]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9095004, -37.0907503], [-10.909026, -37.0908873]], "cor": "#ef4444", "peso": 5.5, "vc": 1.84, "nome": "Avenida Presidente Tancredo Neves"}, {"coords": [[-10.909669, -37.0769303], [-10.9095847, -37.0775418]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9095847, -37.0775418], [-10.9095123, -37.0780903]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9094359, -37.0786791], [-10.9093696, -37.0792526]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9092879, -37.0798111], [-10.9092286, -37.0802948]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9091484, -37.0808317], [-10.9090277, -37.0817515]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9090277, -37.0817515], [-10.9088389, -37.0831327]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9086655, -37.0844753], [-10.9083805, -37.0866194]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9167444, -37.0709315], [-10.9177986, -37.0710797]], "cor": "#eab308", "peso": 3.5, "vc": 0.97, "nome": "Rua Bahia"}, {"coords": [[-10.9077069, -37.0696548], [-10.9088381, -37.0698077]], "cor": "#eab308", "peso": 3.5, "vc": 0.77, "nome": "Rua Bahia"}, {"coords": [[-10.9088381, -37.0698077], [-10.9099468, -37.0699731]], "cor": "#f97316", "peso": 4.5, "vc": 1.06, "nome": "Rua Bahia"}, {"coords": [[-10.9099468, -37.0699731], [-10.9110925, -37.0701201]], "cor": "#f97316", "peso": 4.5, "vc": 1.11, "nome": "Rua Bahia"}, {"coords": [[-10.9099468, -37.0699731], [-10.9098199, -37.0711311]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Rua Santa Catarina"}, {"coords": [[-10.9110925, -37.0701201], [-10.9112305, -37.068985]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Rua Mariano Salmeron"}, {"coords": [[-10.9110925, -37.0701201], [-10.9122491, -37.0702911]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Rua Bahia"}, {"coords": [[-10.9144742, -37.0706016], [-10.9156357, -37.0707773]], "cor": "#f97316", "peso": 4.5, "vc": 1.06, "nome": "Rua Bahia"}, {"coords": [[-10.9159328, -37.0685022], [-10.916471, -37.0686811]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9156357, -37.0707773], [-10.9162151, -37.0708551]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Rua Bahia"}, {"coords": [[-10.9161315, -37.0638826], [-10.917445, -37.0643762]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Avenida Gentil Tavares"}, {"coords": [[-10.9159201, -37.0683217], [-10.9153818, -37.0681218]], "cor": "#eab308", "peso": 3.5, "vc": 0.9, "nome": "Avenida Augusto Franco"}, {"coords": [[-10.9186407, -37.0661337], [-10.9186604, -37.0669585]], "cor": "#f97316", "peso": 4.5, "vc": 1.28, "nome": "Avenida Desembargador Maynard"}, {"coords": [[-10.918295, -37.0734065], [-10.9183269, -37.0746423]], "cor": "#ef4444", "peso": 5.5, "vc": 1.31, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9108019, -37.0723993], [-10.9109453, -37.0712846]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Rua Mariano Salmeron"}, {"coords": [[-10.9096664, -37.0722632], [-10.9095518, -37.0733106]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Rua Maximiano Geraldo de Almeida"}, {"coords": [[-10.9098199, -37.0711311], [-10.9096664, -37.0722632]], "cor": "#eab308", "peso": 3.5, "vc": 0.77, "nome": "Rua Maximiano Geraldo de Almeida"}, {"coords": [[-10.9184024, -37.0722099], [-10.918295, -37.0734065]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Rua Doutor Jos\u00e9 da Silva Ribeiro Filho"}, {"coords": [[-10.9097427, -37.0763697], [-10.909669, -37.0769303]], "cor": "#eab308", "peso": 3.5, "vc": 0.98, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9184536, -37.0646384], [-10.9178427, -37.0643856]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Avenida Gentil Tavares"}, {"coords": [[-10.9126988, -37.064212], [-10.9114033, -37.0641013]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9114033, -37.0641013], [-10.9104834, -37.0637693]], "cor": "#eab308", "peso": 3.5, "vc": 0.74, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9114033, -37.0641013], [-10.9114127, -37.0636462]], "cor": "#eab308", "peso": 3.5, "vc": 0.95, "nome": "Rua Laranjeiras"}, {"coords": [[-10.9126817, -37.0643421], [-10.9140602, -37.0642684]], "cor": "#eab308", "peso": 3.5, "vc": 0.74, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9115509, -37.0574606], [-10.9127215, -37.0574407]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9115509, -37.0574606], [-10.9105257, -37.0574564]], "cor": "#f97316", "peso": 4.5, "vc": 1.11, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9088389, -37.0831327], [-10.9087487, -37.0838267]], "cor": "#f97316", "peso": 4.5, "vc": 1.1, "nome": "Avenida Chanceler Osvaldo Aranha"}, {"coords": [[-10.9186094, -37.0645361], [-10.9186072, -37.0647208]], "cor": "#ef4444", "peso": 5.5, "vc": 1.88, "nome": "Avenida Desembargador Maynard"}, {"coords": [[-10.9186094, -37.0645361], [-10.9184536, -37.0646384]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Gentil Tavares"}, {"coords": [[-10.9140602, -37.0642684], [-10.9142781, -37.0642316]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9099356, -37.0636882], [-10.9104894, -37.0639215]], "cor": "#eab308", "peso": 3.5, "vc": 0.76, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9098297, -37.0634669], [-10.9080589, -37.0622034]], "cor": "#f97316", "peso": 4.5, "vc": 1.12, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9104834, -37.0637693], [-10.9104894, -37.0639215]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9104834, -37.0637693], [-10.9098297, -37.0634669]], "cor": "#f97316", "peso": 4.5, "vc": 1.04, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9104894, -37.0639215], [-10.9114053, -37.064234]], "cor": "#eab308", "peso": 3.5, "vc": 0.94, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9104894, -37.0639215], [-10.9104553, -37.065574]], "cor": "#eab308", "peso": 3.5, "vc": 0.79, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9104553, -37.065574], [-10.9104157, -37.0663396]], "cor": "#eab308", "peso": 3.5, "vc": 0.95, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9049243, -37.0736141], [-10.9050744, -37.0725328]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9050744, -37.0725328], [-10.9051969, -37.0716356]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9050744, -37.0725328], [-10.9049236, -37.0725113]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Rua Acre"}, {"coords": [[-10.9104894, -37.0631772], [-10.9104834, -37.0637693]], "cor": "#eab308", "peso": 3.5, "vc": 0.98, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9114291, -37.062016], [-10.9114618, -37.06089]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Rua Laranjeiras"}, {"coords": [[-10.9105019, -37.0619923], [-10.9104894, -37.0631772]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9105257, -37.0574564], [-10.9105387, -37.0584042]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9105257, -37.0574564], [-10.9115509, -37.0574606]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9105257, -37.0574564], [-10.9101621, -37.057467]], "cor": "#eab308", "peso": 3.5, "vc": 0.86, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9105259, -37.0608964], [-10.9105019, -37.0619923]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Rua S\u00e3o Crist\u00f3v\u00e3o"}, {"coords": [[-10.9097299, -37.057474], [-10.9097869, -37.0574723]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9097299, -37.057474], [-10.9093408, -37.0574847]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9093408, -37.0574847], [-10.9097299, -37.057474]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9093408, -37.0574847], [-10.9088262, -37.0574979]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9088846, -37.0503535], [-10.9077596, -37.0503324]], "cor": "#eab308", "peso": 3.5, "vc": 0.82, "nome": "Rua Apulcro Mota"}, {"coords": [[-10.9088846, -37.0503535], [-10.9081303, -37.0509594]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Avenida Carlos Firpo"}, {"coords": [[-10.9114618, -37.06089], [-10.9114964, -37.0596582]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Rua Laranjeiras"}, {"coords": [[-10.9061595, -37.0503589], [-10.9057152, -37.0503786]], "cor": "#eab308", "peso": 3.5, "vc": 0.89, "nome": "Rua Apulcro Mota"}, {"coords": [[-10.9127484, -37.0503351], [-10.9104966, -37.0503449]], "cor": "#eab308", "peso": 3.5, "vc": 0.9, "nome": "Rua Itabaianinha"}, {"coords": [[-10.9104966, -37.0503449], [-10.9093661, -37.050342]], "cor": "#eab308", "peso": 3.5, "vc": 0.82, "nome": "Rua Itabaianinha"}, {"coords": [[-10.90932, -37.0480147], [-10.9127998, -37.0479697]], "cor": "#ef4444", "peso": 5.5, "vc": 1.33, "nome": "Avenida Rio Branco"}, {"coords": [[-10.9127215, -37.0574407], [-10.9115509, -37.0574606]], "cor": "#eab308", "peso": 3.5, "vc": 0.83, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9127215, -37.0574407], [-10.9140301, -37.0574365]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9127998, -37.0479697], [-10.9128726, -37.04789]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida Ivo do Prado"}, {"coords": [[-10.9140301, -37.0574365], [-10.9127215, -37.0574407]], "cor": "#eab308", "peso": 3.5, "vc": 0.82, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9140301, -37.0574365], [-10.9150112, -37.0574201]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Avenida Pedro Calazans"}, {"coords": [[-10.9137538, -37.0478554], [-10.9149683, -37.0478238]], "cor": "#ef4444", "peso": 5.5, "vc": 1.74, "nome": "Avenida Ivo do Prado"}, {"coords": [[-10.9161519, -37.0475802], [-10.9172075, -37.0473055]], "cor": "#ef4444", "peso": 5.5, "vc": 1.45, "nome": "Avenida Ivo do Prado"}, {"coords": [[-10.9161341, -37.0503269], [-10.9149825, -37.0503243]], "cor": "#eab308", "peso": 3.5, "vc": 0.85, "nome": "Rua Itabaiana"}, {"coords": [[-10.9149825, -37.0503243], [-10.9138454, -37.050322]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Rua Itabaiana"}, {"coords": [[-10.9138454, -37.050322], [-10.9127484, -37.0503351]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Rua Itabaiana"}, {"coords": [[-10.9172606, -37.0503272], [-10.9161341, -37.0503269]], "cor": "#f97316", "peso": 4.5, "vc": 1.07, "nome": "Rua Itabaiana"}, {"coords": [[-10.9184344, -37.0503071], [-10.9172606, -37.0503272]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Rua Itabaiana"}, {"coords": [[-10.9184344, -37.0503071], [-10.9184068, -37.04915]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida Bar\u00e3o de Maruim"}, {"coords": [[-10.9184344, -37.0503071], [-10.9184552, -37.0516592]], "cor": "#f97316", "peso": 4.5, "vc": 1.24, "nome": "Avenida Bar\u00e3o de Maruim"}, {"coords": [[-10.9022102, -37.0891665], [-10.9008103, -37.0890136]], "cor": "#ef4444", "peso": 5.5, "vc": 1.31, "nome": "Avenida General Euclides Figueiredo"}, {"coords": [[-10.9022102, -37.0891665], [-10.9026513, -37.0892946]], "cor": "#f97316", "peso": 4.5, "vc": 1.29, "nome": "Avenida General Euclides Figueiredo"}, {"coords": [[-10.9026513, -37.0892946], [-10.9024446, -37.0907839]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Avenida Matadouro"}, {"coords": [[-10.9026513, -37.0892946], [-10.9029496, -37.08932]], "cor": "#eab308", "peso": 3.5, "vc": 0.93, "nome": "Via sem nome"}, {"coords": [[-10.9032311, -37.0513782], [-10.9032703, -37.0504522]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Sime\u00e3o Sobral"}, {"coords": [[-10.9052117, -37.0530673], [-10.9051159, -37.053137]], "cor": "#f97316", "peso": 4.5, "vc": 1.09, "nome": "Via sem nome"}, {"coords": [[-10.9052117, -37.0530673], [-10.904578, -37.0518254]], "cor": "#eab308", "peso": 3.5, "vc": 0.79, "nome": "Avenida Airton Teles"}, {"coords": [[-10.9052515, -37.0531565], [-10.905985, -37.0526361]], "cor": "#f97316", "peso": 4.5, "vc": 1.07, "nome": "Avenida Carlos Firpo"}, {"coords": [[-10.9051679, -37.0569693], [-10.9054399, -37.0558756]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Avenida Airton Teles"}, {"coords": [[-10.9054471, -37.0590433], [-10.905295, -37.0580106]], "cor": "#eab308", "peso": 3.5, "vc": 0.74, "nome": "Avenida Airton Teles"}, {"coords": [[-10.9052265, -37.0608819], [-10.9051653, -37.0613634]], "cor": "#eab308", "peso": 3.5, "vc": 0.92, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.9048519, -37.0635071], [-10.9046925, -37.0646404]], "cor": "#eab308", "peso": 3.5, "vc": 0.81, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.9042257, -37.0680247], [-10.9040709, -37.0691478]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.9036199, -37.0775445], [-10.9035995, -37.0781647]], "cor": "#f97316", "peso": 4.5, "vc": 1.17, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.9033875, -37.0813016], [-10.9035001, -37.0813083]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Via sem nome"}, {"coords": [[-10.9033875, -37.0813016], [-10.9030523, -37.084828]], "cor": "#eab308", "peso": 3.5, "vc": 0.83, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.9026704, -37.089145], [-10.9022102, -37.0891665]], "cor": "#ef4444", "peso": 5.5, "vc": 1.3, "nome": "Avenida General Euclides Figueiredo"}, {"coords": [[-10.9026704, -37.089145], [-10.9026513, -37.0892946]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Via sem nome"}, {"coords": [[-10.9045872, -37.0536333], [-10.9051488, -37.0532229]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Avenida Jo\u00e3o Ribeiro"}, {"coords": [[-10.905509, -37.0693483], [-10.9053435, -37.069328]], "cor": "#f97316", "peso": 4.5, "vc": 1.14, "nome": "Rua Bahia"}, {"coords": [[-10.905509, -37.0693483], [-10.9065967, -37.0695019]], "cor": "#eab308", "peso": 3.5, "vc": 0.95, "nome": "Rua Bahia"}, {"coords": [[-10.9053477, -37.0704735], [-10.905509, -37.0693483]], "cor": "#f97316", "peso": 4.5, "vc": 1.05, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9039959, -37.0702945], [-10.9041658, -37.0691505]], "cor": "#eab308", "peso": 3.5, "vc": 0.96, "nome": "Avenida Maranh\u00e3o"}, {"coords": [[-10.905212, -37.0704594], [-10.9050501, -37.0716161]], "cor": "#eab308", "peso": 3.5, "vc": 0.75, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9053435, -37.069328], [-10.9052568, -37.0701141]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9053435, -37.069328], [-10.905351, -37.068148]], "cor": "#eab308", "peso": 3.5, "vc": 0.91, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9053435, -37.069328], [-10.905509, -37.0693483]], "cor": "#f97316", "peso": 4.5, "vc": 1.03, "nome": "Rua Bahia"}, {"coords": [[-10.9067752, -37.0610207], [-10.9067435, -37.0609113]], "cor": "#eab308", "peso": 3.5, "vc": 0.87, "nome": "Via sem nome"}, {"coords": [[-10.9067752, -37.0610207], [-10.9064338, -37.0610847]], "cor": "#eab308", "peso": 3.5, "vc": 0.73, "nome": "Avenida Engenheiro Gentil Tavares"}, {"coords": [[-10.9063676, -37.0590527], [-10.9064143, -37.0602161]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Avenida Coelho e Campos"}, {"coords": [[-10.9064143, -37.0602161], [-10.9064338, -37.0610847]], "cor": "#eab308", "peso": 3.5, "vc": 0.84, "nome": "Avenida Coelho e Campos"}, {"coords": [[-10.9062734, -37.0653793], [-10.9063739, -37.0653458]], "cor": "#f97316", "peso": 4.5, "vc": 1.16, "nome": "Via sem nome"}, {"coords": [[-10.9055609, -37.0659534], [-10.9055977, -37.0659179]], "cor": "#f97316", "peso": 4.5, "vc": 1.15, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9055609, -37.0659534], [-10.905351, -37.068148]], "cor": "#eab308", "peso": 3.5, "vc": 0.75, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.9039202, -37.0800591], [-10.9035955, -37.0800175]], "cor": "#f97316", "peso": 4.5, "vc": 1.01, "nome": "Rua Natal"}, {"coords": [[-10.9039202, -37.0800591], [-10.9040486, -37.0800805]], "cor": "#eab308", "peso": 3.5, "vc": 0.88, "nome": "Rua Natal"}, {"coords": [[-10.9049236, -37.0725113], [-10.9043251, -37.0724134]], "cor": "#f97316", "peso": 4.5, "vc": 1.08, "nome": "Rua Acre"}, {"coords": [[-10.9049236, -37.0725113], [-10.9048486, -37.0730578]], "cor": "#f97316", "peso": 4.5, "vc": 1.02, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.905351, -37.068148], [-10.9053435, -37.069328]], "cor": "#eab308", "peso": 3.5, "vc": 0.78, "nome": "Avenida S\u00e3o Paulo"}, {"coords": [[-10.905351, -37.068148], [-10.9055609, -37.0659534]], "cor": "#eab308", "peso": 3.5, "vc": 0.99, "nome": "Avenida S\u00e3o Paulo"}];
+        var semaforos = [{"lat": -10.9127998, "lon": -37.0479697, "node": "951730159"}, {"lat": -10.9139303, "lon": -37.0527351, "node": "951730183"}, {"lat": -10.913942, "lon": -37.053887, "node": "951730178"}, {"lat": -10.9139652, "lon": -37.0550086, "node": "960563542"}, {"lat": -10.9139674, "lon": -37.0551336, "node": "951730173"}, {"lat": -10.9140301, "lon": -37.0574365, "node": "951730166"}, {"lat": -10.9186094, "lon": -37.0645361, "node": "951669074"}, {"lat": -10.918696, "lon": -37.0693284, "node": "1813051531"}, {"lat": -10.9186939, "lon": -37.069479, "node": "1868023282"}, {"lat": -10.918516, "lon": -37.0711973, "node": "3023126573"}, {"lat": -10.9184024, "lon": -37.0722099, "node": "951653830"}, {"lat": -10.9183269, "lon": -37.0746423, "node": "1868072268"}, {"lat": -10.9185217, "lon": -37.0789298, "node": "1460629652"}, {"lat": -10.9185609, "lon": -37.0798703, "node": "1341153434"}, {"lat": -10.9127484, "lon": -37.0503351, "node": "951713501"}, {"lat": -10.9104966, "lon": -37.0503449, "node": "951713502"}, {"lat": -10.9104973, "lon": -37.0515535, "node": "951730229"}, {"lat": -10.9104959, "lon": -37.0526734, "node": "951713491"}, {"lat": -10.9105257, "lon": -37.0574564, "node": "951699861"}, {"lat": -10.9104894, "lon": -37.0631772, "node": "951699843"}, {"lat": -10.9104834, "lon": -37.0637693, "node": "951673683"}, {"lat": -10.9104894, "lon": -37.0639215, "node": "951673693"}, {"lat": -10.9104018, "lon": -37.0665856, "node": "951638426"}, {"lat": -10.9103926, "lon": -37.0666561, "node": "5793167302"}, {"lat": -10.9114668, "lon": -37.0670714, "node": "951638517"}];
+        var paradasDijk = new Set([7, 10, 24, 33, 36, 39, 42]);
+        var paradasBpr = new Set([6, 9, 13, 18, 23, 26, 33, 36, 41]);
+
+        var map = L.map('map', { zoomControl: true });
+
+        // Camadas de Mapa Base (Sem erro 403 do OpenStreetMap)
+        var mapaRuas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Street Map'
+        }).addTo(map);
+
+        var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Satellite'
+        });
+
+        var mapaCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; CARTO'
+        });
+
+        L.control.layers({
+            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
+            "🛰️ Imagem de Satélite": mapaSatelite,
+            "🏙️ Mapa Carto": mapaCarto
+        }, null, { position: 'topright' }).addTo(map);
+
+        // Adicionar Camada de Tráfego Congestionado
+        segmentos.forEach(function(s) {
+            L.polyline(s.coords, {
+                color: s.cor,
+                weight: s.peso,
+                opacity: 0.65
+            }).addTo(map).bindTooltip(s.nome + ' (V/C: ' + s.vc + ')');
+        });
+
+        // Camada de Semáforos Reais
+        semaforos.forEach(function(sem) {
+            L.circleMarker([sem.lat, sem.lon], {
+                radius: 6,
+                color: '#b91c1c',
+                fillColor: '#ef4444',
+                fillOpacity: 0.85,
+                weight: 2
+            }).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+        });
+
+        // Rota 1: Dijkstra (Vermelho)
+        var polyDijk = L.polyline(coordsDijk, {
+            color: '#ef4444',
+            weight: 5,
+            opacity: 0.8,
+            dashArray: '8, 8'
+        }).addTo(map);
+
+        // Rota 2: BPR (Azul Celeste com animação)
+        var polyBpr = L.polyline(coordsBpr, {
+            color: '#38bdf8',
+            weight: 6,
+            opacity: 0.95,
+            className: 'rota-bpr-animada'
+        }).addTo(map);
+
+        map.fitBounds(polyBpr.getBounds(), { padding: [60, 60] });
+
+        // Marcadores Origem e Destino
+        var iconOrigem = L.divIcon({
+            html: '<div style="background:#22c55e; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid #fff; box-shadow:0 3px 6px rgba(0,0,0,0.4);">A</div>',
+            iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        L.marker(coordsDijk[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Origem:</b> Centro Histórico (Praça Fausto Cardoso / Palácio)');
+
+        var iconDestino = L.divIcon({
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid #fff; box-shadow:0 3px 6px rgba(0,0,0,0.4);">🎓</div>',
+            iconSize: [32, 32], iconAnchor: [16, 16]
+        });
+        L.marker(coordsDijk[coordsDijk.length - 1], { icon: iconDestino }).addTo(map).bindPopup('<b>Destino:</b> Universidade Federal de Sergipe (UFS - São Cristóvão)');
+
+        // Carros com Badges de Estado
+        var carDijk = L.marker(coordsDijk[0], {
+            icon: L.divIcon({
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-dijk" class="car-badge badge-green">🚗 Dijkstra</div><div class="car-icon-body">🚗</div></div>',
+                iconSize: [0, 0]
+            }),
+            zIndexOffset: 900
+        }).addTo(map);
+
+        var carBpr = L.marker(coordsBpr[0], {
+            icon: L.divIcon({
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-bpr" class="car-badge badge-green">🚙 BPR</div><div class="car-icon-body">🚙</div></div>',
+                iconSize: [0, 0]
+            }),
+            zIndexOffset: 1000
+        }).addTo(map);
+
+        var idxDijk = 0, idxBpr = 0;
+        var progDijk = 0, progBpr = 0;
+        var waitDijk = 0, waitBpr = 0;
+        var paradasFeitasDijk = 0, paradasFeitasBpr = 0;
+        var visitedDijk = new Set();
+        var visitedBpr = new Set();
+        var isRunning = false;
+        var timerId = null;
+
+        var tDijk = 16.693762111846763;
+        var tBpr = 15.876420545263775;
+        var tMin = Math.min(tDijk, tBpr);
+
+        // Calibração proporcional ao tempo de viagem BPR e paradas
+        var totalTargetTicks = 120;
+        var targetTicksDijk = totalTargetTicks * (tDijk / tMin);
+        var targetTicksBpr = totalTargetTicks * (tBpr / tMin);
+
+        var driveTicksDijk = Math.max(30, targetTicksDijk - (paradasDijk.size * 10));
+        var driveTicksBpr = Math.max(30, targetTicksBpr - (paradasBpr.size * 10));
+
+        var stepRateDijk = (coordsDijk.length - 1) / driveTicksDijk;
+        var stepRateBpr = (coordsBpr.length - 1) / driveTicksBpr;
+
+        var btnPlay = document.getElementById('btn-play');
+        var btnReset = document.getElementById('btn-reset');
+        var selVel = document.getElementById('sel-vel');
+
+        function stepRace() {
+            if (!isRunning) return;
+
+            var finDijk = (idxDijk >= coordsDijk.length - 1);
+            var finBpr = (idxBpr >= coordsBpr.length - 1);
+
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+
+            // --- Lógica Carro Dijkstra ---
+            if (!finDijk) {
+                if (waitDijk > 0) {
+                    waitDijk--;
+                    if (waitDijk === 1) {
+                        if (bDijk) { bDijk.className = 'car-badge badge-yellow'; bDijk.innerText = '🟡 Abrindo...'; }
+                        if (sDijk) { sDijk.style.color = '#fde047'; sDijk.innerText = '🟡 Sinal abrindo...'; }
+                    } else {
+                        if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }
+                        if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
+                    }
+                } else if (paradasDijk.has(idxDijk) && !visitedDijk.has(idxDijk)) {
+                    visitedDijk.add(idxDijk);
+                    paradasFeitasDijk++;
+                    waitDijk = 10;
+                    if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }
+                    if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
+                } else {
+                    progDijk += stepRateDijk;
+                    var nextDijk = Math.min(coordsDijk.length - 1, Math.floor(progDijk));
+                    if (nextDijk !== idxDijk) {
+                        idxDijk = nextDijk;
+                        carDijk.setLatLng(coordsDijk[idxDijk]);
+                    }
+                    if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }
+                    if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Em movimento'; }
+                }
+            } else {
+                if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🏁 Chegou na UFS!'; }
+                if (sDijk) { sDijk.style.color = '#38bdf8'; sDijk.innerText = '🏁 Chegou ao Campus UFS!'; }
+            }
+
+            // --- Lógica Carro BPR ---
+            if (!finBpr) {
+                if (waitBpr > 0) {
+                    waitBpr--;
+                    if (waitBpr === 1) {
+                        if (bBpr) { bBpr.className = 'car-badge badge-yellow'; bBpr.innerText = '🟡 Abrindo...'; }
+                        if (sBpr) { sBpr.style.color = '#fde047'; sBpr.innerText = '🟡 Sinal abrindo...'; }
+                    } else {
+                        if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }
+                        if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
+                    }
+                } else if (paradasBpr.has(idxBpr) && !visitedBpr.has(idxBpr)) {
+                    visitedBpr.add(idxBpr);
+                    paradasFeitasBpr++;
+                    waitBpr = 10;
+                    if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }
+                    if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
+                } else {
+                    progBpr += stepRateBpr;
+                    var nextBpr = Math.min(coordsBpr.length - 1, Math.floor(progBpr));
+                    if (nextBpr !== idxBpr) {
+                        idxBpr = nextBpr;
+                        carBpr.setLatLng(coordsBpr[idxBpr]);
+                    }
+                    if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }
+                    if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Em movimento'; }
+                }
+            } else {
+                if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🏁 Chegou na UFS!'; }
+                if (sBpr) { sBpr.style.color = '#38bdf8'; sBpr.innerText = '🏁 Chegou ao Campus UFS!'; }
+            }
+
+            if (!finDijk || !finBpr) {
+                var mult = parseFloat(selVel.value);
+                timerId = setTimeout(stepRace, Math.max(25, 240 / mult));
+            } else {
+                isRunning = false;
+                btnPlay.innerText = '▶️ Reiniciar';
+            }
+        }
+
+        btnPlay.onclick = function() {
+            if (isRunning) {
+                isRunning = false;
+                clearTimeout(timerId);
+                btnPlay.innerText = '▶️ Continuar';
+            } else {
+                if (idxDijk >= coordsDijk.length - 1 && idxBpr >= coordsBpr.length - 1) {
+                    idxDijk = 0; idxBpr = 0;
+                    progDijk = 0; progBpr = 0;
+                    waitDijk = 0; waitBpr = 0;
+                    paradasFeitasDijk = 0; paradasFeitasBpr = 0;
+                    visitedDijk.clear(); visitedBpr.clear();
+                }
+                isRunning = true;
+                btnPlay.innerText = '⏸️ Pausar';
+                stepRace();
+            }
+        };
+
+        btnReset.onclick = function() {
+            isRunning = false;
+            clearTimeout(timerId);
+            idxDijk = 0; idxBpr = 0;
+            progDijk = 0; progBpr = 0;
+            waitDijk = 0; waitBpr = 0;
+            paradasFeitasDijk = 0; paradasFeitasBpr = 0;
+            visitedDijk.clear(); visitedBpr.clear();
+            carDijk.setLatLng(coordsDijk[0]);
+            carBpr.setLatLng(coordsBpr[0]);
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+            if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }
+            if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }
+            if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Pronto'; }
+            if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Pronto'; }
+            btnPlay.innerText = '▶️ Iniciar Corrida';
+        };
+    </script>
+</body>
+</html>

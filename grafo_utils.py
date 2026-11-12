@@ -13,53 +13,103 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 # Coordenada padrão da UFS (Campus São Cristóvão - Entrada Principal / Reitoria)
-UFS_COORDS = (-10.9252468, -37.1050639)
+# Corresponde ao nó OSM 5556227911 na malha viária
+UFS_COORDS = (-10.9251921, -37.1049681)
 UFS_DEFAULT_NODE = "5556227911"
 UFS_NAME = "Universidade Federal de Sergipe (UFS - São Cristóvão)"
 
 # Pontos Notáveis de Aracaju (Pontos A pré-configurados para escolha rápida)
+# As coords refletem as coordenadas reais dos nós e acessos na malha viária (y=lat, x=lon)
 PONTOS_NOTAVEIS = {
     "1": {
         "nome": "Centro Histórico (Praça Fausto Cardoso / Palácio)",
-        "coords": (-10.9081, -37.0515),
-        "node": "954735330"
+        "coords": (-10.912801995116695, -37.049147372805464),
+        "node": "951730159"
     },
     "2": {
         "nome": "Shopping Jardins (Bairro Jardins)",
-        "coords": (-10.9413, -37.0681),
-        "node": "1473460412"
+        "coords": (-10.941962896677753, -37.06014278758582),
+        "node": "960684988"
     },
     "3": {
         "nome": "Terminal D.I.A. (Distrito Industrial de Aracaju)",
-        "coords": (-10.9539, -37.0781),
-        "node": "1125694869"
+        "coords": (-10.949134184098071, -37.074347784370595),
+        "node": "963823969"
     },
     "4": {
         "nome": "Parque da Sementeira (Av. Beira Mar / 13 de Julho)",
-        "coords": (-10.9467, -37.0608),
-        "node": "5951232982"
+        "coords": (-10.946093350002837, -37.05120046039128),
+        "node": "7233527361"
     },
     "5": {
         "nome": "Orla de Atalaia (Passarela do Caranguejo / Arcos)",
-        "coords": (-10.9695, -37.0473),
+        "coords": (-10.991985087477707, -37.051088912564325),
         "node": "958154915"
     },
     "6": {
         "nome": "Aeroporto Internacional de Aracaju (Santa Maria)",
-        "coords": (-10.9693, -37.0698),
+        "coords": (-10.987693832505258, -37.071165206404004),
         "node": "1166098230"
     },
     "7": {
         "nome": "Mercado Municipal de Aracaju (Mercados Centrais)",
-        "coords": (-10.9031, -37.0510),
-        "node": "8954876002"
+        "coords": (-10.904203149917997, -37.04893599008609),
+        "node": "940347825"
     },
     "8": {
         "nome": "Mirante do Bairro 13 de Julho (Calçadão)",
-        "coords": (-10.9295, -37.0520),
-        "node": "939897250"
+        "coords": (-10.93198300338264, -37.047835092994085),
+        "node": "960634737"
     }
 }
+
+# Corredores viários de conexão para pontos situados ao sul do limite do recorte OSM
+CORREDORES_ACESSO = {
+    "5": [
+        [-10.991985087477707, -37.051088912564325],  # Passarela do Caranguejo
+        [-10.984532, -37.047530],                     # Arcos de Atalaia / Av. Santos Dumont
+        [-10.978110, -37.045200],                     # Lagos da Orla / Av. Santos Dumont
+        [-10.972300, -37.044100],                     # Rotatória Oceanário / Av. Santos Dumont
+        [-10.9694619, -37.0473173]                    # Entrada malha viária (Nó 958154915)
+    ],
+    "6": [
+        [-10.987693832505258, -37.071165206404004],  # Terminal do Aeroporto
+        [-10.980200, -37.071200],                     # Av. Senador Júlio César Leite
+        [-10.974500, -37.070500],                     # Acesso Av. Caçula Barreto
+        [-10.9692736, -37.0698304]                    # Entrada malha viária (Nó 1166098230)
+    ]
+}
+
+
+def _prefixar_trajeto_origem(coords, coord_origem, paradas=None):
+    """
+    Acopla suavemente a coordenada de origem à malha viária,
+    garantindo que o veículo trafegue exclusivamente pelas vias e avenidas.
+    """
+    if coord_origem is None or not coords:
+        return coords, paradas
+
+    c_orig = [float(coord_origem[0]), float(coord_origem[1])]
+    if abs(coords[0][0] - c_orig[0]) < 1e-6 and abs(coords[0][1] - c_orig[1]) < 1e-6:
+        return coords, paradas
+
+    corredor_inserido = None
+    if abs(c_orig[0] - PONTOS_NOTAVEIS["5"]["coords"][0]) < 1e-4 and abs(c_orig[1] - PONTOS_NOTAVEIS["5"]["coords"][1]) < 1e-4:
+        corredor_inserido = CORREDORES_ACESSO["5"][:-1]
+    elif abs(c_orig[0] - PONTOS_NOTAVEIS["6"]["coords"][0]) < 1e-4 and abs(c_orig[1] - PONTOS_NOTAVEIS["6"]["coords"][1]) < 1e-4:
+        corredor_inserido = CORREDORES_ACESSO["6"][:-1]
+
+    if corridor := corredor_inserido:
+        n_extra = len(corridor)
+        coords = corridor + coords
+        if paradas is not None:
+            paradas = [idx + n_extra for idx in paradas]
+    else:
+        coords = [c_orig] + coords
+        if paradas is not None:
+            paradas = [idx + 1 for idx in paradas]
+
+    return coords, paradas
 
 
 def _extrair_numero(val, default_val):
@@ -445,15 +495,16 @@ def menu_selecao_origem(G):
 
         if opcao in PONTOS_NOTAVEIS:
             ponto = PONTOS_NOTAVEIS[opcao]
-            print(f"\n[+] Ponto A selecionado: {ponto['nome']} (Nó: {ponto['node']})")
-            return ponto["node"], ponto["nome"], ponto["coords"]
+            no = ponto["node"]
+            print(f"\n[+] Ponto A selecionado: {ponto['nome']} (Nó: {no})")
+            return no, ponto["nome"], ponto["coords"]
         elif opcao == "9":
             try:
                 lat_str = input(" Digite a Latitude (ex: -10.920): ").strip()
                 lon_str = input(" Digite a Longitude (ex: -37.070): ").strip()
                 lat, lon = float(lat_str), float(lon_str)
                 no_prox = encontrar_no_mais_proximo(G, lat, lon)
-                nome_personalizado = f"Ponto Personalizado ({lat:.4f}, {lon:.4f})"
+                nome_personalizado = f"Ponto Personalizado ({lat:.6f}, {lon:.6f})"
                 print(f"[+] Ponto A localizado próximo ao Nó {no_prox}")
                 return no_prox, nome_personalizado, (lat, lon)
             except Exception as e:
@@ -534,22 +585,52 @@ def _extrair_semaforos_rotas(G, caminhos):
     return semaforos
 
 
+def _extrair_indices_semaforos(G, caminho):
+    """
+    Identifica os índices da rota (caminho) onde o veículo deve parar em semáforos.
+    Agrupa nós semaforizados próximos (a menos de 3 nós de distância) para simular
+    uma parada por cruzamento físico sem repetições artificiais a cada 5 metros.
+    """
+    indices_parada = []
+    ultimo_idx = -99
+    for i, n in enumerate(caminho):
+        if 0 < i < len(caminho) - 1 and G.nodes[n].get("is_traffic_signal", False):
+            if i - ultimo_idx >= 3:
+                indices_parada.append(i)
+                ultimo_idx = i
+    return indices_parada
+
+
 # ==============================================================================
 # GERADORES DE SIMULAÇÃO VISUAL INTERATIVA (HTML AUTÔNOMO 100% FUNCIONAL)
 # ==============================================================================
 
-def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_saida="simulacao_dijkstra.html"):
+def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_saida="simulacao_dijkstra.html", coord_origem=None):
     """
     Gera página HTML independente, com Leaflet 1.9 e OpenStreetMap garantidos,
-    sem erros de injeção, sem dependência de plugins frágeis e com animação suave de veículo.
+    sem erros de injeção, sem dependência de plugins frágeis e com animação de veículo
+    que para fisicamente nos semáforos vermelhos com feedback visual dinâmico.
     """
-    coords = metricas["coordenadas"]
+    if coord_origem is None:
+        for p in PONTOS_NOTAVEIS.values():
+            if p["nome"] == nome_origem:
+                coord_origem = p["coords"]
+                break
+
+    coords = [list(c) for c in metricas["coordenadas"]]
+    semaforos = _extrair_semaforos_rotas(G, [caminho])
+    paradas = _extrair_indices_semaforos(G, caminho)
+
+    coords, paradas = _prefixar_trajeto_origem(coords, coord_origem, paradas)
+
     centro_lat = sum(c[0] for c in coords) / len(coords)
     centro_lon = sum(c[1] for c in coords) / len(coords)
     vias = [d["nome"] for d in metricas["detalhes"]]
 
     coords_json = json.dumps(coords)
     vias_json = json.dumps(vias)
+    sem_json = json.dumps(semaforos)
+    paradas_json = json.dumps(paradas)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -600,8 +681,8 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
             padding: 20px 24px;
             border-radius: 14px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            min-width: 330px;
-            max-width: 420px;
+            min-width: 350px;
+            max-width: 440px;
             border: 1px solid rgba(255,255,255,0.12);
             backdrop-filter: blur(10px);
         }}
@@ -691,11 +772,55 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
             background: #38bdf8;
             transition: width 0.15s ease-out;
         }}
-        .car-marker {{
-            font-size: 30px;
+        /* Marcador de Carro com Badge de Estado Semafórico */
+        .car-marker-container {{
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            margin-left: -70px;
+            margin-top: -42px;
+            pointer-events: none;
+        }}
+        .car-badge {{
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }}
+        .badge-green {{
+            background: #16a34a;
+            border: 1px solid #4ade80;
+        }}
+        .badge-yellow {{
+            background: #d97706;
+            border: 1px solid #fde047;
+            animation: pulseYellow 0.6s infinite alternate;
+        }}
+        .badge-red {{
+            background: #dc2626;
+            border: 1px solid #f87171;
+            animation: pulseRed 0.6s infinite alternate;
+        }}
+        @keyframes pulseRed {{
+            from {{ transform: scale(1); box-shadow: 0 0 5px #ef4444; }}
+            to {{ transform: scale(1.08); box-shadow: 0 0 14px #ef4444; }}
+        }}
+        @keyframes pulseYellow {{
+            from {{ transform: scale(1); }}
+            to {{ transform: scale(1.06); }}
+        }}
+        .car-icon-body {{
+            font-size: 28px;
             line-height: 1;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
-            transition: transform 0.1s linear;
         }}
     </style>
 </head>
@@ -714,8 +839,14 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
                 <div class="valor" id="dist-atual">0.00 km</div>
             </div>
             <div class="hud-caixa">
-                <div class="label">Tempo Estimado</div>
-                <div class="valor" id="tempo-atual">{metricas['tempo_fluxo_livre_min']:.1f} min</div>
+                <div class="label">Semáforos na Rota</div>
+                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / {len(paradas)} 🛑</div>
+            </div>
+            <div class="hud-caixa" style="grid-column: span 2;">
+                <div class="label">Status do Veículo</div>
+                <div class="valor" id="status-veiculo" style="font-size: 13px; color: #4ade80;">
+                    🟢 Pronto para iniciar
+                </div>
             </div>
             <div class="hud-caixa" style="grid-column: span 2;">
                 <div class="label">Via Atual</div>
@@ -744,6 +875,8 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
     <script>
         var coords = {coords_json};
         var vias = {vias_json};
+        var semaforos = {sem_json};
+        var paradas = new Set({paradas_json});
         var totalDistKm = {metricas['distancia_km']};
         var totalTempoMin = {metricas['tempo_fluxo_livre_min']};
 
@@ -787,7 +920,18 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
 
         map.fitBounds(polyline.getBounds(), {{ padding: [60, 60] }});
 
-        // 4. Marcador Origem (Ponto A)
+        // 4. Marcadores de Semáforos Reais na Rota
+        semaforos.forEach(function(sem) {{
+            L.circleMarker([sem.lat, sem.lon], {{
+                radius: 6,
+                color: '#b91c1c',
+                fillColor: '#ef4444',
+                fillOpacity: 0.85,
+                weight: 2
+            }}).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+        }});
+
+        // 5. Marcador Origem (Ponto A)
         var iconOrigem = L.divIcon({{
             className: 'custom-pin',
             html: '<div style=\"background:#22c55e; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;\">A</div>',
@@ -796,7 +940,7 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
         }});
         L.marker(coords[0], {{ icon: iconOrigem }}).addTo(map).bindPopup('<b>Ponto A (Origem):</b><br>{nome_origem}');
 
-        // 5. Marcador Destino (UFS)
+        // 6. Marcador Destino (UFS)
         var iconDestino = L.divIcon({{
             className: 'custom-pin',
             html: '<div style=\"background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;\">🎓</div>',
@@ -805,54 +949,107 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
         }});
         L.marker(coords[coords.length - 1], {{ icon: iconDestino }}).addTo(map).bindPopup('<b>Destino:</b><br>{UFS_NAME}');
 
-        // 6. Veículo Animado (Emoji de Carro com Rotação)
+        // 7. Veículo Animado com Badge Dinâmico de Semáforo
         var carIcon = L.divIcon({{
-            className: 'car-marker',
-            html: '<div id=\"car-emoji\">🚗</div>',
-            iconSize: [32, 32],
-            iconAnchor: [16, 16]
+            className: 'custom-car-div',
+            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">🟢 Pronto</div><div class="car-icon-body">🚗</div></div>',
+            iconSize: [0, 0]
         }});
         var carMarker = L.marker(coords[0], {{ icon: carIcon, zIndexOffset: 1000 }}).addTo(map);
 
-        // 7. Lógica de Simulação e Controle de Reprodução
+        // 8. Lógica de Simulação com Parada Real nos Semáforos
         var currentIndex = 0;
         var isRunning = false;
         var timerId = null;
+        var waitTicks = 0;
+        var paradasFeitas = 0;
+        var visitados = new Set();
 
         var btnPlay = document.getElementById('btn-play');
         var btnReset = document.getElementById('btn-reset');
         var selVel = document.getElementById('sel-vel');
         var distAtual = document.getElementById('dist-atual');
         var viaAtual = document.getElementById('via-atual');
+        var semAtual = document.getElementById('sem-atual');
+        var statusVeiculo = document.getElementById('status-veiculo');
         var hudBarra = document.getElementById('hud-barra');
 
         function step() {{
             if (!isRunning) return;
 
-            if (currentIndex < coords.length - 1) {{
-                currentIndex++;
-                var pAtual = coords[currentIndex];
-                carMarker.setLatLng(pAtual);
+            var carBadge = document.getElementById('car-badge');
 
-                var pct = (currentIndex / (coords.length - 1)) * 100;
-                hudBarra.style.width = pct + '%';
-
-                var dKm = (currentIndex / (coords.length - 1)) * totalDistKm;
-                distAtual.innerText = dKm.toFixed(2) + ' km';
-
-                if (currentIndex - 1 < vias.length) {{
-                    viaAtual.innerText = vias[currentIndex - 1];
+            // Se o carro está aguardando o semáforo abrir
+            if (waitTicks > 0) {{
+                waitTicks--;
+                if (waitTicks === 1) {{
+                    if (carBadge) {{
+                        carBadge.className = 'car-badge badge-yellow';
+                        carBadge.innerText = '🟡 Abrindo...';
+                    }}
+                    statusVeiculo.style.color = '#fde047';
+                    statusVeiculo.innerText = '🟡 Semáforo abrindo... Atenção!';
+                }} else {{
+                    if (carBadge) {{
+                        carBadge.className = 'car-badge badge-red';
+                        carBadge.innerText = '🛑 Sinal Vermelho';
+                    }}
+                    statusVeiculo.style.color = '#f87171';
+                    statusVeiculo.innerText = '🛑 Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
                 }}
-
-                var velMult = parseFloat(selVel.value);
-                var delayMs = Math.max(25, 260 / velMult);
-                timerId = setTimeout(step, delayMs);
+            }} else if (paradas.has(currentIndex) && !visitados.has(currentIndex)) {{
+                // Chegou em um semáforo: inicia tempo de parada
+                visitados.add(currentIndex);
+                paradasFeitas++;
+                waitTicks = 10;
+                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' 🛑';
+                if (carBadge) {{
+                    carBadge.className = 'car-badge badge-red';
+                    carBadge.innerText = '🛑 Sinal Vermelho';
+                }}
+                statusVeiculo.style.color = '#f87171';
+                statusVeiculo.innerText = '🛑 Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
             }} else {{
-                isRunning = false;
-                btnPlay.innerText = '▶️ Reiniciar';
-                viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
-                hudBarra.style.width = '100%';
+                // Avanço normal de rota
+                if (currentIndex < coords.length - 1) {{
+                    currentIndex++;
+                    var pAtual = coords[currentIndex];
+                    carMarker.setLatLng(pAtual);
+
+                    if (carBadge) {{
+                        carBadge.className = 'car-badge badge-green';
+                        carBadge.innerText = '🟢 Em movimento';
+                    }}
+                    statusVeiculo.style.color = '#4ade80';
+                    statusVeiculo.innerText = '🟢 Em movimento (Fluxo normal)';
+
+                    var pct = (currentIndex / (coords.length - 1)) * 100;
+                    hudBarra.style.width = pct + '%';
+
+                    var dKm = (currentIndex / (coords.length - 1)) * totalDistKm;
+                    distAtual.innerText = dKm.toFixed(2) + ' km';
+
+                    if (currentIndex - 1 < vias.length) {{
+                        viaAtual.innerText = vias[currentIndex - 1];
+                    }}
+                }} else {{
+                    isRunning = false;
+                    btnPlay.innerText = '▶️ Reiniciar';
+                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
+                    statusVeiculo.style.color = '#38bdf8';
+                    statusVeiculo.innerText = '🏁 Chegou ao Destino (Campus UFS)!';
+                    if (carBadge) {{
+                        carBadge.className = 'car-badge badge-green';
+                        carBadge.innerText = '🏁 Chegou na UFS!';
+                    }}
+                    hudBarra.style.width = '100%';
+                    return;
+                }}
             }}
+
+            var velMult = parseFloat(selVel.value);
+            var delayMs = Math.max(25, 260 / velMult);
+            timerId = setTimeout(step, delayMs);
         }}
 
         btnPlay.onclick = function() {{
@@ -863,6 +1060,9 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
             }} else {{
                 if (currentIndex >= coords.length - 1) {{
                     currentIndex = 0;
+                    visitados.clear();
+                    waitTicks = 0;
+                    paradasFeitas = 0;
                 }}
                 isRunning = true;
                 btnPlay.innerText = '⏸️ Pausar';
@@ -874,10 +1074,21 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
             isRunning = false;
             clearTimeout(timerId);
             currentIndex = 0;
+            waitTicks = 0;
+            paradasFeitas = 0;
+            visitados.clear();
             carMarker.setLatLng(coords[0]);
             hudBarra.style.width = '0%';
             distAtual.innerText = '0.00 km';
+            semAtual.innerText = '0 / ' + paradas.size + ' 🛑';
             viaAtual.innerText = 'Iniciando trajeto...';
+            statusVeiculo.style.color = '#4ade80';
+            statusVeiculo.innerText = '🟢 Pronto para iniciar';
+            var carBadge = document.getElementById('car-badge');
+            if (carBadge) {{
+                carBadge.className = 'car-badge badge-green';
+                carBadge.innerText = '🟢 Pronto';
+            }}
             btnPlay.innerText = '▶️ Iniciar';
         }};
     </script>
@@ -892,18 +1103,34 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
 
 def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
                             caminho_bpr, metricas_bpr,
-                            nome_origem, arquivo_saida="simulacao_bpr.html"):
+                            nome_origem, arquivo_saida="simulacao_bpr.html", coord_origem=None):
     """
     Gera página HTML com corrida entre dois carros:
-    🚗 Carro 1 (Dijkstra - Preso no trânsito) vs 🚙 Carro 2 (BPR - Desvia do congestionamento).
+    🚗 Carro 1 (Dijkstra - Preso no trânsito e semáforos) vs 🚙 Carro 2 (BPR - Desvia do congestionamento).
+    Ambos param nos semáforos vermelhos de seus respectivos caminhos.
     """
-    coords_dijk = metricas_dijkstra["coordenadas"]
-    coords_bpr = metricas_bpr["coordenadas"]
+    if coord_origem is None:
+        for p in PONTOS_NOTAVEIS.values():
+            if p["nome"] == nome_origem:
+                coord_origem = p["coords"]
+                break
+
+    coords_dijk = [list(c) for c in metricas_dijkstra["coordenadas"]]
+    coords_bpr = [list(c) for c in metricas_bpr["coordenadas"]]
     segmentos_vc = _extrair_segmentos_congestionados(G)
+    semaforos = _extrair_semaforos_rotas(G, [caminho_dijkstra, caminho_bpr])
+    paradas_dijk = _extrair_indices_semaforos(G, caminho_dijkstra)
+    paradas_bpr = _extrair_indices_semaforos(G, caminho_bpr)
+
+    coords_dijk, paradas_dijk = _prefixar_trajeto_origem(coords_dijk, coord_origem, paradas_dijk)
+    coords_bpr, paradas_bpr = _prefixar_trajeto_origem(coords_bpr, coord_origem, paradas_bpr)
 
     coords_dijk_json = json.dumps(coords_dijk)
     coords_bpr_json = json.dumps(coords_bpr)
     seg_json = json.dumps(segmentos_vc)
+    sem_json = json.dumps(semaforos)
+    paradas_dijk_json = json.dumps(paradas_dijk)
+    paradas_bpr_json = json.dumps(paradas_bpr)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -951,8 +1178,8 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             padding: 20px 24px;
             border-radius: 14px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            min-width: 370px;
-            max-width: 440px;
+            min-width: 380px;
+            max-width: 460px;
             border: 1px solid rgba(255,255,255,0.12);
             backdrop-filter: blur(10px);
         }}
@@ -1016,6 +1243,51 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             gap: 10px;
         }}
         .dot {{ width: 9px; height: 9px; border-radius: 50%; display: inline-block; }}
+        /* Badges de Estado Semafórico */
+        .car-marker-container {{
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            margin-left: -70px;
+            margin-top: -42px;
+            pointer-events: none;
+        }}
+        .car-badge {{
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }}
+        .badge-green {{
+            background: #16a34a;
+            border: 1px solid #4ade80;
+        }}
+        .badge-yellow {{
+            background: #d97706;
+            border: 1px solid #fde047;
+        }}
+        .badge-red {{
+            background: #dc2626;
+            border: 1px solid #f87171;
+            animation: pulseRed 0.6s infinite alternate;
+        }}
+        @keyframes pulseRed {{
+            from {{ transform: scale(1); box-shadow: 0 0 5px #ef4444; }}
+            to {{ transform: scale(1.08); box-shadow: 0 0 14px #ef4444; }}
+        }}
+        .car-icon-body {{
+            font-size: 28px;
+            line-height: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }}
     </style>
 </head>
 <body>
@@ -1027,7 +1299,8 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
         <div class="card-rota card-dijkstra">
             <div>
                 <b>🚗 Dijkstra Clássico</b><br>
-                <small>{metricas_dijkstra['distancia_km']:.2f} km (Via mais congestionada)</small>
+                <small>{metricas_dijkstra['distancia_km']:.2f} km | 🛑 {len(paradas_dijk)} semáforos</small><br>
+                <span id="status-dijk" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
             </div>
             <div style="text-align: right; color: #ef4444; font-weight: 700; font-size: 15px;">
                 {metricas_dijkstra['tempo_bpr_min']:.1f} min
@@ -1037,7 +1310,8 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
         <div class="card-rota card-bpr">
             <div>
                 <b>🚙 Rota BPR (Adaptativa)</b> 🏆<br>
-                <small>{metricas_bpr['distancia_km']:.2f} km (Desvia de gargalos)</small>
+                <small>{metricas_bpr['distancia_km']:.2f} km | 🛑 {len(paradas_bpr)} semáforos</small><br>
+                <span id="status-bpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
             </div>
             <div style="text-align: right; color: #38bdf8; font-weight: 700; font-size: 15px;">
                 {metricas_bpr['tempo_bpr_min']:.1f} min
@@ -1066,6 +1340,9 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
         var coordsDijk = {coords_dijk_json};
         var coordsBpr = {coords_bpr_json};
         var segmentos = {seg_json};
+        var semaforos = {sem_json};
+        var paradasDijk = new Set({paradas_dijk_json});
+        var paradasBpr = new Set({paradas_bpr_json});
 
         var map = L.map('map', {{ zoomControl: true }});
 
@@ -1101,6 +1378,17 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             }}).addTo(map).bindTooltip(s.nome + ' (V/C: ' + s.vc + ')');
         }});
 
+        // Camada de Semáforos Reais
+        semaforos.forEach(function(sem) {{
+            L.circleMarker([sem.lat, sem.lon], {{
+                radius: 6,
+                color: '#b91c1c',
+                fillColor: '#ef4444',
+                fillOpacity: 0.85,
+                weight: 2
+            }}).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+        }});
+
         // Rota 1: Dijkstra (Vermelho)
         var polyDijk = L.polyline(coordsDijk, {{
             color: '#ef4444',
@@ -1132,16 +1420,48 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
         }});
         L.marker(coordsDijk[coordsDijk.length - 1], {{ icon: iconDestino }}).addTo(map).bindPopup('<b>Destino:</b> {UFS_NAME}');
 
-        // Carros
-        var carDijkIcon = L.divIcon({{ html: '<div style=\"font-size:28px;\">🚗</div>', iconSize: [28,28], iconAnchor: [14,14] }});
-        var carBprIcon = L.divIcon({{ html: '<div style=\"font-size:28px;\">🚙</div>', iconSize: [28,28], iconAnchor: [14,14] }});
+        // Carros com Badges de Estado
+        var carDijk = L.marker(coordsDijk[0], {{
+            icon: L.divIcon({{
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-dijk" class="car-badge badge-green">🚗 Dijkstra</div><div class="car-icon-body">🚗</div></div>',
+                iconSize: [0, 0]
+            }}),
+            zIndexOffset: 900
+        }}).addTo(map);
 
-        var carDijk = L.marker(coordsDijk[0], {{ icon: carDijkIcon, zIndexOffset: 900 }}).addTo(map);
-        var carBpr = L.marker(coordsBpr[0], {{ icon: carBprIcon, zIndexOffset: 1000 }}).addTo(map);
+        var carBpr = L.marker(coordsBpr[0], {{
+            icon: L.divIcon({{
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-bpr" class="car-badge badge-green">🚙 BPR</div><div class="car-icon-body">🚙</div></div>',
+                iconSize: [0, 0]
+            }}),
+            zIndexOffset: 1000
+        }}).addTo(map);
 
         var idxDijk = 0, idxBpr = 0;
+        var progDijk = 0, progBpr = 0;
+        var waitDijk = 0, waitBpr = 0;
+        var paradasFeitasDijk = 0, paradasFeitasBpr = 0;
+        var visitedDijk = new Set();
+        var visitedBpr = new Set();
         var isRunning = false;
         var timerId = null;
+
+        var tDijk = {metricas_dijkstra['tempo_bpr_min']};
+        var tBpr = {metricas_bpr['tempo_bpr_min']};
+        var tMin = Math.min(tDijk, tBpr);
+
+        // Calibração proporcional ao tempo de viagem BPR e paradas
+        var totalTargetTicks = 120;
+        var targetTicksDijk = totalTargetTicks * (tDijk / tMin);
+        var targetTicksBpr = totalTargetTicks * (tBpr / tMin);
+
+        var driveTicksDijk = Math.max(30, targetTicksDijk - (paradasDijk.size * 10));
+        var driveTicksBpr = Math.max(30, targetTicksBpr - (paradasBpr.size * 10));
+
+        var stepRateDijk = (coordsDijk.length - 1) / driveTicksDijk;
+        var stepRateBpr = (coordsBpr.length - 1) / driveTicksBpr;
 
         var btnPlay = document.getElementById('btn-play');
         var btnReset = document.getElementById('btn-reset');
@@ -1153,8 +1473,74 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             var finDijk = (idxDijk >= coordsDijk.length - 1);
             var finBpr = (idxBpr >= coordsBpr.length - 1);
 
-            if (!finDijk) {{ idxDijk++; carDijk.setLatLng(coordsDijk[idxDijk]); }}
-            if (!finBpr) {{ idxBpr++; carBpr.setLatLng(coordsBpr[idxBpr]); }}
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+
+            // --- Lógica Carro Dijkstra ---
+            if (!finDijk) {{
+                if (waitDijk > 0) {{
+                    waitDijk--;
+                    if (waitDijk === 1) {{
+                        if (bDijk) {{ bDijk.className = 'car-badge badge-yellow'; bDijk.innerText = '🟡 Abrindo...'; }}
+                        if (sDijk) {{ sDijk.style.color = '#fde047'; sDijk.innerText = '🟡 Sinal abrindo...'; }}
+                    }} else {{
+                        if (bDijk) {{ bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }}
+                        if (sDijk) {{ sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }}
+                    }}
+                }} else if (paradasDijk.has(idxDijk) && !visitedDijk.has(idxDijk)) {{
+                    visitedDijk.add(idxDijk);
+                    paradasFeitasDijk++;
+                    waitDijk = 10;
+                    if (bDijk) {{ bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }}
+                    if (sDijk) {{ sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }}
+                }} else {{
+                    progDijk += stepRateDijk;
+                    var nextDijk = Math.min(coordsDijk.length - 1, Math.floor(progDijk));
+                    if (nextDijk !== idxDijk) {{
+                        idxDijk = nextDijk;
+                        carDijk.setLatLng(coordsDijk[idxDijk]);
+                    }}
+                    if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }}
+                    if (sDijk) {{ sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Em movimento'; }}
+                }}
+            }} else {{
+                if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🏁 Chegou na UFS!'; }}
+                if (sDijk) {{ sDijk.style.color = '#38bdf8'; sDijk.innerText = '🏁 Chegou ao Campus UFS!'; }}
+            }}
+
+            // --- Lógica Carro BPR ---
+            if (!finBpr) {{
+                if (waitBpr > 0) {{
+                    waitBpr--;
+                    if (waitBpr === 1) {{
+                        if (bBpr) {{ bBpr.className = 'car-badge badge-yellow'; bBpr.innerText = '🟡 Abrindo...'; }}
+                        if (sBpr) {{ sBpr.style.color = '#fde047'; sBpr.innerText = '🟡 Sinal abrindo...'; }}
+                    }} else {{
+                        if (bBpr) {{ bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }}
+                        if (sBpr) {{ sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }}
+                    }}
+                }} else if (paradasBpr.has(idxBpr) && !visitedBpr.has(idxBpr)) {{
+                    visitedBpr.add(idxBpr);
+                    paradasFeitasBpr++;
+                    waitBpr = 10;
+                    if (bBpr) {{ bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }}
+                    if (sBpr) {{ sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }}
+                }} else {{
+                    progBpr += stepRateBpr;
+                    var nextBpr = Math.min(coordsBpr.length - 1, Math.floor(progBpr));
+                    if (nextBpr !== idxBpr) {{
+                        idxBpr = nextBpr;
+                        carBpr.setLatLng(coordsBpr[idxBpr]);
+                    }}
+                    if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }}
+                    if (sBpr) {{ sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Em movimento'; }}
+                }}
+            }} else {{
+                if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🏁 Chegou na UFS!'; }}
+                if (sBpr) {{ sBpr.style.color = '#38bdf8'; sBpr.innerText = '🏁 Chegou ao Campus UFS!'; }}
+            }}
 
             if (!finDijk || !finBpr) {{
                 var mult = parseFloat(selVel.value);
@@ -1173,6 +1559,10 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             }} else {{
                 if (idxDijk >= coordsDijk.length - 1 && idxBpr >= coordsBpr.length - 1) {{
                     idxDijk = 0; idxBpr = 0;
+                    progDijk = 0; progBpr = 0;
+                    waitDijk = 0; waitBpr = 0;
+                    paradasFeitasDijk = 0; paradasFeitasBpr = 0;
+                    visitedDijk.clear(); visitedBpr.clear();
                 }}
                 isRunning = true;
                 btnPlay.innerText = '⏸️ Pausar';
@@ -1184,8 +1574,20 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
             isRunning = false;
             clearTimeout(timerId);
             idxDijk = 0; idxBpr = 0;
+            progDijk = 0; progBpr = 0;
+            waitDijk = 0; waitBpr = 0;
+            paradasFeitasDijk = 0; paradasFeitasBpr = 0;
+            visitedDijk.clear(); visitedBpr.clear();
             carDijk.setLatLng(coordsDijk[0]);
             carBpr.setLatLng(coordsBpr[0]);
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+            if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }}
+            if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }}
+            if (sDijk) {{ sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Pronto'; }}
+            if (sBpr) {{ sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Pronto'; }}
             btnPlay.innerText = '▶️ Iniciar Corrida';
         }};
     </script>
@@ -1201,24 +1603,40 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
 def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
                              caminho_bpr, metricas_bpr,
                              caminho_mbpr, metricas_mbpr,
-                             nome_origem, arquivo_saida="simulacao_mbpr.html"):
+                             nome_origem, arquivo_saida="simulacao_mbpr.html", coord_origem=None):
     """
     Gera página HTML completa com o Grande Prêmio das 3 Rotas:
     🚗 Carro 1 (Dijkstra) vs 🚙 Carro 2 (BPR) vs 🏎️ Carro 3 (MBPR).
-    Inclui semáforos interativos mapeados na malha de Aracaju.
+    Inclui semáforos interativos mapeados na malha de Aracaju com paradas reais nos sinais vermelhos.
     """
-    coords_dijk = metricas_dijkstra["coordenadas"]
-    coords_bpr = metricas_bpr["coordenadas"]
-    coords_mbpr = metricas_mbpr["coordenadas"]
+    if coord_origem is None:
+        for p in PONTOS_NOTAVEIS.values():
+            if p["nome"] == nome_origem:
+                coord_origem = p["coords"]
+                break
+
+    coords_dijk = [list(c) for c in metricas_dijkstra["coordenadas"]]
+    coords_bpr = [list(c) for c in metricas_bpr["coordenadas"]]
+    coords_mbpr = [list(c) for c in metricas_mbpr["coordenadas"]]
 
     segmentos_vc = _extrair_segmentos_congestionados(G)
     semaforos = _extrair_semaforos_rotas(G, [caminho_dijkstra, caminho_bpr, caminho_mbpr])
+    paradas_dijk = _extrair_indices_semaforos(G, caminho_dijkstra)
+    paradas_bpr = _extrair_indices_semaforos(G, caminho_bpr)
+    paradas_mbpr = _extrair_indices_semaforos(G, caminho_mbpr)
+
+    coords_dijk, paradas_dijk = _prefixar_trajeto_origem(coords_dijk, coord_origem, paradas_dijk)
+    coords_bpr, paradas_bpr = _prefixar_trajeto_origem(coords_bpr, coord_origem, paradas_bpr)
+    coords_mbpr, paradas_mbpr = _prefixar_trajeto_origem(coords_mbpr, coord_origem, paradas_mbpr)
 
     coords_dijk_json = json.dumps(coords_dijk)
     coords_bpr_json = json.dumps(coords_bpr)
     coords_mbpr_json = json.dumps(coords_mbpr)
     seg_json = json.dumps(segmentos_vc)
     sem_json = json.dumps(semaforos)
+    paradas_dijk_json = json.dumps(paradas_dijk)
+    paradas_bpr_json = json.dumps(paradas_bpr)
+    paradas_mbpr_json = json.dumps(paradas_mbpr)
 
     html_content = f"""<!DOCTYPE html>
 <html lang="pt-BR">
@@ -1266,8 +1684,8 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
             padding: 20px 24px;
             border-radius: 14px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.6);
-            min-width: 400px;
-            max-width: 460px;
+            min-width: 420px;
+            max-width: 480px;
             border: 1px solid rgba(255,255,255,0.12);
             backdrop-filter: blur(10px);
         }}
@@ -1322,6 +1740,51 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
             margin-top: 8px;
             line-height: 1.4;
         }}
+        /* Badges de Estado Semafórico */
+        .car-marker-container {{
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            margin-left: -70px;
+            margin-top: -42px;
+            pointer-events: none;
+        }}
+        .car-badge {{
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }}
+        .badge-green {{
+            background: #16a34a;
+            border: 1px solid #4ade80;
+        }}
+        .badge-yellow {{
+            background: #d97706;
+            border: 1px solid #fde047;
+        }}
+        .badge-red {{
+            background: #dc2626;
+            border: 1px solid #f87171;
+            animation: pulseRed 0.6s infinite alternate;
+        }}
+        @keyframes pulseRed {{
+            from {{ transform: scale(1); box-shadow: 0 0 5px #ef4444; }}
+            to {{ transform: scale(1.08); box-shadow: 0 0 14px #ef4444; }}
+        }}
+        .car-icon-body {{
+            font-size: 28px;
+            line-height: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }}
     </style>
 </head>
 <body>
@@ -1333,7 +1796,8 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         <div class="card-rota card-dijkstra">
             <div>
                 <b>🚗 Dijkstra Clássico</b><br>
-                <small>{metricas_dijkstra['distancia_km']:.2f} km | 🛑 {metricas_dijkstra['num_semaforos']} semáforos</small>
+                <small>{metricas_dijkstra['distancia_km']:.2f} km | 🛑 {len(paradas_dijk)} semáforos</small><br>
+                <span id="status-dijk" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
             </div>
             <div style="text-align: right; color: #ef4444; font-weight: 700;">
                 {metricas_dijkstra['tempo_mbpr_min']:.1f} min
@@ -1343,7 +1807,8 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         <div class="card-rota card-bpr">
             <div>
                 <b>🚙 BPR Tradicional</b><br>
-                <small>{metricas_bpr['distancia_km']:.2f} km | 🛑 {metricas_bpr['num_semaforos']} semáforos</small>
+                <small>{metricas_bpr['distancia_km']:.2f} km | 🛑 {len(paradas_bpr)} semáforos</small><br>
+                <span id="status-bpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
             </div>
             <div style="text-align: right; color: #f59e0b; font-weight: 700;">
                 {metricas_bpr['tempo_mbpr_min']:.1f} min
@@ -1353,7 +1818,8 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         <div class="card-rota card-mbpr">
             <div>
                 <b>🏎️ MBPR (Modificado)</b> 🏆<br>
-                <small>{metricas_mbpr['distancia_km']:.2f} km | 🛑 {metricas_mbpr['num_semaforos']} semáforos</small>
+                <small>{metricas_mbpr['distancia_km']:.2f} km | 🛑 {len(paradas_mbpr)} semáforos</small><br>
+                <span id="status-mbpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
             </div>
             <div style="text-align: right; color: #22c55e; font-weight: 700; font-size: 15px;">
                 {metricas_mbpr['tempo_mbpr_min']:.1f} min
@@ -1361,7 +1827,7 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         </div>
 
         <div class="explicacao-mbpr">
-            💡 <b>Por que o MBPR vence?</b> O MBPR desviou de {metricas_dijkstra['num_semaforos'] - metricas_mbpr['num_semaforos']} semáforos e das vias com filas em supersaturação, economizando {metricas_dijkstra['tempo_mbpr_min'] - metricas_mbpr['tempo_mbpr_min']:.1f} minutos!
+            💡 <b>Por que o MBPR vence?</b> O MBPR desviou de {len(paradas_dijk) - len(paradas_mbpr)} cruzamentos semaforizados e das vias com filas em supersaturação, economizando {metricas_dijkstra['tempo_mbpr_min'] - metricas_mbpr['tempo_mbpr_min']:.1f} minutos!
         </div>
 
         <div class="hud-controles">
@@ -1382,6 +1848,9 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         var coordsMbpr = {coords_mbpr_json};
         var segmentos = {seg_json};
         var semaforos = {sem_json};
+        var paradasDijk = new Set({paradas_dijk_json});
+        var paradasBpr = new Set({paradas_bpr_json});
+        var paradasMbpr = new Set({paradas_mbpr_json});
 
         var map = L.map('map', {{ zoomControl: true }});
 
@@ -1453,14 +1922,64 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
         }});
         L.marker(coordsDijk[coordsDijk.length - 1], {{ icon: iconDestino }}).addTo(map).bindPopup('<b>Destino:</b> {UFS_NAME}');
 
-        // Carros
-        var carDijk = L.marker(coordsDijk[0], {{ icon: L.divIcon({{ html: '<div style=\"font-size:26px;\">🚗</div>', iconSize: [26,26], iconAnchor: [13,13] }}), zIndexOffset: 900 }}).addTo(map);
-        var carBpr = L.marker(coordsBpr[0], {{ icon: L.divIcon({{ html: '<div style=\"font-size:26px;\">🚙</div>', iconSize: [26,26], iconAnchor: [13,13] }}), zIndexOffset: 950 }}).addTo(map);
-        var carMbpr = L.marker(coordsMbpr[0], {{ icon: L.divIcon({{ html: '<div style=\"font-size:28px;\">🏎️</div>', iconSize: [28,28], iconAnchor: [14,14] }}), zIndexOffset: 1000 }}).addTo(map);
+        // Carros com Badges de Estado Semafórico
+        var carDijk = L.marker(coordsDijk[0], {{
+            icon: L.divIcon({{
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-dijk" class="car-badge badge-green">🚗 Dijkstra</div><div class="car-icon-body">🚗</div></div>',
+                iconSize: [0, 0]
+            }}),
+            zIndexOffset: 900
+        }}).addTo(map);
+
+        var carBpr = L.marker(coordsBpr[0], {{
+            icon: L.divIcon({{
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-bpr" class="car-badge badge-green">🚙 BPR</div><div class="car-icon-body">🚙</div></div>',
+                iconSize: [0, 0]
+            }}),
+            zIndexOffset: 950
+        }}).addTo(map);
+
+        var carMbpr = L.marker(coordsMbpr[0], {{
+            icon: L.divIcon({{
+                className: 'custom-car-div',
+                html: '<div class="car-marker-container"><div id="badge-mbpr" class="car-badge badge-green">🏎️ MBPR 🏆</div><div class="car-icon-body">🏎️</div></div>',
+                iconSize: [0, 0]
+            }}),
+            zIndexOffset: 1000
+        }}).addTo(map);
 
         var iDijk = 0, iBpr = 0, iMbpr = 0;
+        var progDijk = 0, progBpr = 0, progMbpr = 0;
+        var waitDijk = 0, waitBpr = 0, waitMbpr = 0;
+        var paradasFeitasDijk = 0, paradasFeitasBpr = 0, paradasFeitasMbpr = 0;
+
+        var visitedDijk = new Set();
+        var visitedBpr = new Set();
+        var visitedMbpr = new Set();
+
         var isRunning = false;
         var timerId = null;
+
+        var tDijk = {metricas_dijkstra['tempo_mbpr_min']};
+        var tBpr = {metricas_bpr['tempo_mbpr_min']};
+        var tMbpr = {metricas_mbpr['tempo_mbpr_min']};
+        var tMin = Math.min(tDijk, tBpr, tMbpr);
+
+        // Calibração proporcional ao tempo real estimado de cada modelo
+        var totalTargetTicks = 120;
+        var targetTicksDijk = totalTargetTicks * (tDijk / tMin);
+        var targetTicksBpr = totalTargetTicks * (tBpr / tMin);
+        var targetTicksMbpr = totalTargetTicks * (tMbpr / tMin);
+
+        var driveTicksDijk = Math.max(30, targetTicksDijk - (paradasDijk.size * 10));
+        var driveTicksBpr = Math.max(30, targetTicksBpr - (paradasBpr.size * 10));
+        var driveTicksMbpr = Math.max(30, targetTicksMbpr - (paradasMbpr.size * 10));
+
+        var stepRateDijk = (coordsDijk.length - 1) / driveTicksDijk;
+        var stepRateBpr = (coordsBpr.length - 1) / driveTicksBpr;
+        var stepRateMbpr = (coordsMbpr.length - 1) / driveTicksMbpr;
 
         var btnPlay = document.getElementById('btn-play');
         var btnReset = document.getElementById('btn-reset');
@@ -1473,9 +1992,109 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
             var finBpr = (iBpr >= coordsBpr.length - 1);
             var finMbpr = (iMbpr >= coordsMbpr.length - 1);
 
-            if (!finDijk) {{ iDijk++; carDijk.setLatLng(coordsDijk[iDijk]); }}
-            if (!finBpr) {{ iBpr++; carBpr.setLatLng(coordsBpr[iBpr]); }}
-            if (!finMbpr) {{ iMbpr++; carMbpr.setLatLng(coordsMbpr[iMbpr]); }}
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var bMbpr = document.getElementById('badge-mbpr');
+
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+            var sMbpr = document.getElementById('status-mbpr');
+
+            // --- 1. Dijkstra ---
+            if (!finDijk) {{
+                if (waitDijk > 0) {{
+                    waitDijk--;
+                    if (waitDijk === 1) {{
+                        if (bDijk) {{ bDijk.className = 'car-badge badge-yellow'; bDijk.innerText = '🟡 Abrindo...'; }}
+                        if (sDijk) {{ sDijk.style.color = '#fde047'; sDijk.innerText = '🟡 Sinal abrindo...'; }}
+                    }} else {{
+                        if (bDijk) {{ bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }}
+                        if (sDijk) {{ sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }}
+                    }}
+                }} else if (paradasDijk.has(iDijk) && !visitedDijk.has(iDijk)) {{
+                    visitedDijk.add(iDijk);
+                    paradasFeitasDijk++;
+                    waitDijk = 10;
+                    if (bDijk) {{ bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }}
+                    if (sDijk) {{ sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }}
+                }} else {{
+                    progDijk += stepRateDijk;
+                    var nextDijk = Math.min(coordsDijk.length - 1, Math.floor(progDijk));
+                    if (nextDijk !== iDijk) {{
+                        iDijk = nextDijk;
+                        carDijk.setLatLng(coordsDijk[iDijk]);
+                    }}
+                    if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }}
+                    if (sDijk) {{ sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Em movimento'; }}
+                }}
+            }} else {{
+                if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🏁 Chegou na UFS!'; }}
+                if (sDijk) {{ sDijk.style.color = '#38bdf8'; sDijk.innerText = '🏁 Chegou ao Campus UFS!'; }}
+            }}
+
+            // --- 2. BPR ---
+            if (!finBpr) {{
+                if (waitBpr > 0) {{
+                    waitBpr--;
+                    if (waitBpr === 1) {{
+                        if (bBpr) {{ bBpr.className = 'car-badge badge-yellow'; bBpr.innerText = '🟡 Abrindo...'; }}
+                        if (sBpr) {{ sBpr.style.color = '#fde047'; sBpr.innerText = '🟡 Sinal abrindo...'; }}
+                    }} else {{
+                        if (bBpr) {{ bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }}
+                        if (sBpr) {{ sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }}
+                    }}
+                }} else if (paradasBpr.has(iBpr) && !visitedBpr.has(iBpr)) {{
+                    visitedBpr.add(iBpr);
+                    paradasFeitasBpr++;
+                    waitBpr = 10;
+                    if (bBpr) {{ bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }}
+                    if (sBpr) {{ sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }}
+                }} else {{
+                    progBpr += stepRateBpr;
+                    var nextBpr = Math.min(coordsBpr.length - 1, Math.floor(progBpr));
+                    if (nextBpr !== iBpr) {{
+                        iBpr = nextBpr;
+                        carBpr.setLatLng(coordsBpr[iBpr]);
+                    }}
+                    if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }}
+                    if (sBpr) {{ sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Em movimento'; }}
+                }}
+            }} else {{
+                if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🏁 Chegou na UFS!'; }}
+                if (sBpr) {{ sBpr.style.color = '#38bdf8'; sBpr.innerText = '🏁 Chegou ao Campus UFS!'; }}
+            }}
+
+            // --- 3. MBPR ---
+            if (!finMbpr) {{
+                if (waitMbpr > 0) {{
+                    waitMbpr--;
+                    if (waitMbpr === 1) {{
+                        if (bMbpr) {{ bMbpr.className = 'car-badge badge-yellow'; bMbpr.innerText = '🟡 Abrindo...'; }}
+                        if (sMbpr) {{ sMbpr.style.color = '#fde047'; sMbpr.innerText = '🟡 Sinal abrindo...'; }}
+                    }} else {{
+                        if (bMbpr) {{ bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = '🛑 Sinal Vermelho'; }}
+                        if (sMbpr) {{ sMbpr.style.color = '#f87171'; sMbpr.innerText = '🛑 Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }}
+                    }}
+                }} else if (paradasMbpr.has(iMbpr) && !visitedMbpr.has(iMbpr)) {{
+                    visitedMbpr.add(iMbpr);
+                    paradasFeitasMbpr++;
+                    waitMbpr = 10;
+                    if (bMbpr) {{ bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = '🛑 Sinal Vermelho'; }}
+                    if (sMbpr) {{ sMbpr.style.color = '#f87171'; sMbpr.innerText = '🛑 Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }}
+                }} else {{
+                    progMbpr += stepRateMbpr;
+                    var nextMbpr = Math.min(coordsMbpr.length - 1, Math.floor(progMbpr));
+                    if (nextMbpr !== iMbpr) {{
+                        iMbpr = nextMbpr;
+                        carMbpr.setLatLng(coordsMbpr[iMbpr]);
+                    }}
+                    if (bMbpr) {{ bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR 🏆'; }}
+                    if (sMbpr) {{ sMbpr.style.color = '#4ade80'; sMbpr.innerText = '🟢 Em movimento livre'; }}
+                }}
+            }} else {{
+                if (bMbpr) {{ bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏆 Vencedor UFS!'; }}
+                if (sMbpr) {{ sMbpr.style.color = '#22c55e'; sMbpr.innerText = '🏆 1º LUGAR! Chegou à UFS!'; }}
+            }}
 
             if (!finDijk || !finBpr || !finMbpr) {{
                 var vel = parseFloat(selVel.value);
@@ -1494,6 +2113,10 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
             }} else {{
                 if (iDijk >= coordsDijk.length - 1 && iMbpr >= coordsMbpr.length - 1) {{
                     iDijk = 0; iBpr = 0; iMbpr = 0;
+                    progDijk = 0; progBpr = 0; progMbpr = 0;
+                    waitDijk = 0; waitBpr = 0; waitMbpr = 0;
+                    paradasFeitasDijk = 0; paradasFeitasBpr = 0; paradasFeitasMbpr = 0;
+                    visitedDijk.clear(); visitedBpr.clear(); visitedMbpr.clear();
                 }}
                 isRunning = true;
                 btnPlay.innerText = '⏸️ Pausar';
@@ -1505,9 +2128,31 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
             isRunning = false;
             clearTimeout(timerId);
             iDijk = 0; iBpr = 0; iMbpr = 0;
+            progDijk = 0; progBpr = 0; progMbpr = 0;
+            waitDijk = 0; waitBpr = 0; waitMbpr = 0;
+            paradasFeitasDijk = 0; paradasFeitasBpr = 0; paradasFeitasMbpr = 0;
+            visitedDijk.clear(); visitedBpr.clear(); visitedMbpr.clear();
+
             carDijk.setLatLng(coordsDijk[0]);
             carBpr.setLatLng(coordsBpr[0]);
             carMbpr.setLatLng(coordsMbpr[0]);
+
+            var bDijk = document.getElementById('badge-dijk');
+            var bBpr = document.getElementById('badge-bpr');
+            var bMbpr = document.getElementById('badge-mbpr');
+
+            var sDijk = document.getElementById('status-dijk');
+            var sBpr = document.getElementById('status-bpr');
+            var sMbpr = document.getElementById('status-mbpr');
+
+            if (bDijk) {{ bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }}
+            if (bBpr) {{ bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }}
+            if (bMbpr) {{ bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR 🏆'; }}
+
+            if (sDijk) {{ sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Pronto'; }}
+            if (sBpr) {{ sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Pronto'; }}
+            if (sMbpr) {{ sMbpr.style.color = '#4ade80'; sMbpr.innerText = '🟢 Pronto'; }}
+
             btnPlay.innerText = '▶️ Iniciar Simulação dos 3';
         }};
     </script>
@@ -1524,12 +2169,19 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
 # GERADORES DE GRÁFICOS ESTATÍSTICOS COM MATPLOTLIB
 # ==============================================================================
 
-def plotar_grafico_dijkstra(G, caminho, metricas, nome_origem, arquivo_png="simulacao_dijkstra.png"):
+def plotar_grafico_dijkstra(G, caminho, metricas, nome_origem, arquivo_png="simulacao_dijkstra.png", coord_origem=None):
     """Gera visualização gráfica do trajeto de Dijkstra com perfil de velocidades e distâncias."""
+    if coord_origem is None:
+        for p in PONTOS_NOTAVEIS.values():
+            if p["nome"] == nome_origem:
+                coord_origem = p["coords"]
+                break
+
     fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
 
     # 1. Mapa de nós e arestas no plano (Longitude x Latitude)
-    coords = metricas["coordenadas"]
+    coords = [list(c) for c in metricas["coordenadas"]]
+    coords, _ = _prefixar_trajeto_origem(coords, coord_origem)
     lons = [c[1] for c in coords]
     lats = [c[0] for c in coords]
 

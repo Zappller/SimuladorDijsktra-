@@ -119,7 +119,8 @@ def main():
         caminho_dijk, metricas_dijk,
         caminho_bpr, metricas_bpr,
         caminho_mbpr, metricas_mbpr,
-        nome_origem, arquivo_html
+        nome_origem, arquivo_html,
+        coord_origem=coords_origem
     )
 
     # 9. Gerar Gráficos Estatísticos com Matplotlib
