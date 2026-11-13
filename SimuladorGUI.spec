@@ -1,9 +1,9 @@
 # -*- mode: python ; coding: utf-8 -*-
 from PyInstaller.utils.hooks import collect_all
 
-datas = [('aracaju.graphml', '.'), ('cache', 'cache'), ('1_dijkstra.py', '.'), ('2_bpr.py', '.'), ('3_mbpr.py', '.'), ('grafo_utils.py', '.')]
+datas = [('aracaju.graphml', '.'), ('cache', 'cache')]
 binaries = []
-hiddenimports = ['1_dijkstra', '2_bpr', '3_mbpr', 'grafo_utils']
+hiddenimports = ['grafo_utils']
 tmp_ret = collect_all('osmnx')
 datas += tmp_ret[0]; binaries += tmp_ret[1]; hiddenimports += tmp_ret[2]
 tmp_ret = collect_all('folium')

@@ -40,7 +40,7 @@ class SimuladorApp(tk.Tk):
 
         lbl_titulo = tk.Label(
             header,
-            text="🚦 SIMULADOR DE ROTEAMENTO VIÁRIO: ARACAJU ➔ UFS",
+            text=" SIMULADOR DE ROTEAMENTO VIÁRIO: ARACAJU ➔ UFS",
             font=("Segoe UI", 16, "bold"),
             bg="#1e293b",
             fg="#38bdf8"
@@ -101,7 +101,7 @@ class SimuladorApp(tk.Tk):
         # Botão Executar
         self.btn_executar = tk.Button(
             painel_ctrl,
-            text="🚀 Executar e Comparar os 3",
+            text=" Executar e Comparar os 3",
             font=("Segoe UI", 11, "bold"),
             bg="#22c55e",
             fg="#ffffff",
@@ -242,7 +242,7 @@ class SimuladorApp(tk.Tk):
             self.after(0, lambda: messagebox.showerror("Erro", str(e)))
         finally:
             self.after(0, lambda: self.btn_executar.config(
-                state="normal", text="🚀 Executar e Comparar os 3"))
+                state="normal", text=" Executar e Comparar os 3"))
 
     def _atualizar_resultados(self, m_dijk, m_bpr, m_mbpr, nome_origem):
         # Limpar tabela
@@ -258,9 +258,9 @@ class SimuladorApp(tk.Tk):
             ("Tempo BPR sem Semáforo (min)", f"{m_dijk['tempo_bpr_min']:.1f} min",
              f"{m_bpr['tempo_bpr_min']:.1f} min", f"{m_mbpr['tempo_bpr_min']:.1f} min"),
             ("Tempo Efetivo Real MBPR (min)", f"{m_dijk['tempo_mbpr_min']:.1f} min",
-             f"{m_bpr['tempo_mbpr_min']:.1f} min", f"{m_mbpr['tempo_mbpr_min']:.1f} min 🏆"),
-            ("Cruzamentos com Semáforos", f"{m_dijk['num_semaforos']} 🛑",
-             f"{m_bpr['num_semaforos']} 🛑", f"{m_mbpr['num_semaforos']} 🚦"),
+             f"{m_bpr['tempo_mbpr_min']:.1f} min", f"{m_mbpr['tempo_mbpr_min']:.1f} min "),
+            ("Cruzamentos com Semáforos", f"{m_dijk['num_semaforos']} ",
+             f"{m_bpr['num_semaforos']} ", f"{m_mbpr['num_semaforos']} "),
             ("Quantidade de Cruzamentos",
              f"{m_dijk['num_nos']} nós", f"{m_bpr['num_nos']} nós", f"{m_mbpr['num_nos']} nós")
         ]
