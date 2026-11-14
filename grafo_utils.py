@@ -34,12 +34,12 @@ PONTOS_NOTAVEIS = {
     "3": {
         "nome": "Terminal D.I.A. (Distrito Industrial de Aracaju)",
         "coords": (-10.949134184098071, -37.074347784370595),
-        "node": "963823969"
+        "node": "945963506"
     },
     "4": {
         "nome": "Parque da Sementeira (Av. Beira Mar / 13 de Julho)",
         "coords": (-10.946093350002837, -37.05120046039128),
-        "node": "7233527361"
+        "node": "13999677997"
     },
     "5": {
         "nome": "Orla de Atalaia (Passarela do Caranguejo / Arcos)",
@@ -49,7 +49,7 @@ PONTOS_NOTAVEIS = {
     "6": {
         "nome": "Aeroporto Internacional de Aracaju (Santa Maria)",
         "coords": (-10.987693832505258, -37.071165206404004),
-        "node": "1166098230"
+        "node": "7019078452"
     },
     "7": {
         "nome": "Mercado Municipal de Aracaju (Mercados Centrais)",
@@ -73,10 +73,19 @@ CORREDORES_ACESSO = {
         [-10.9694619, -37.0473173]                    # Entrada malha viária (Nó 958154915)
     ],
     "6": [
-        [-10.987693832505258, -37.071165206404004],  # Terminal do Aeroporto
-        [-10.980200, -37.071200],                     # Av. Senador Júlio César Leite
-        [-10.974500, -37.070500],                     # Acesso Av. Caçula Barreto
-        [-10.9692736, -37.0698304]                    # Entrada malha viária (Nó 1166098230)
+        [-10.987693832505258, -37.071165206404004],  # Terminal do Aeroporto (Saída)
+        [-10.987600, -37.069500],                     # Av. Senador Júlio César Leite
+        [-10.987300, -37.066500],                     # Av. Senador Júlio César Leite
+        [-10.986800, -37.062800],                     # Av. Senador Júlio César Leite
+        [-10.986200, -37.060100],                     # Contorno da cabeceira da pista
+        [-10.985650, -37.058800],                     # Rotatória com Av. Monteiro Lobato
+        [-10.983500, -37.060400],                     # Av. Prefeito Heráclito G. Rollemberg
+        [-10.980500, -37.063200],                     # Av. Prefeito Heráclito G. Rollemberg
+        [-10.977200, -37.066700],                     # Av. Prefeito Heráclito G. Rollemberg (Farolândia)
+        [-10.974000, -37.069800],                     # Av. Prefeito Heráclito G. Rollemberg (Cruzamento Nabuco)
+        [-10.970800, -37.072800],                     # Av. Prefeito Heráclito G. Rollemberg
+        [-10.967500, -37.075800],                     # Av. Prefeito Heráclito G. Rollemberg
+        [-10.9644102, -37.0783981]                    # Entrada da malha viária oficial (Nó 7019078452)
     ]
 }
 

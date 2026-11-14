@@ -1,28 +1,28 @@
-"""
-================================================================================
-PROGRAMA 3: ROTEAMENTO COM FUNÇÃO MBPR (MODIFIED BPR) EM ARACAJU (PONTO A ➔ UFS)
-Trabalho de Teoria dos Grafos - Roteamento com Tráfego, Filas e Semáforos
-================================================================================
-A função MBPR (Modified Bureau of Public Roads) aprimora a função BPR tradicional
-para resolver duas limitações críticas da BPR clássica em redes viárias urbanas:
+    """
+    ================================================================================
+    PROGRAMA 3: ROTEAMENTO COM FUNÇÃO MBPR (MODIFIED BPR) EM ARACAJU (PONTO A ➔ UFS)
+    Trabalho de Teoria dos Grafos - Roteamento com Tráfego, Filas e Semáforos
+    ================================================================================
+    A função MBPR (Modified Bureau of Public Roads) aprimora a função BPR tradicional
+    para resolver duas limitações críticas da BPR clássica em redes viárias urbanas:
 
-1. REGIME DUPLO DE SUPERSATURAÇÃO (Dual-Regime / Akçelik / NCHRP 387):
-   Quando a demanda de tráfego excede a capacidade (V/C > 1.0), a BPR padrão
-   subestima a formação de filas estagnadas. A MBPR incorpora o atraso físico de
-   acumulação e dispersão de filas veiculares.
+    1. REGIME DUPLO DE SUPERSATURAÇÃO (Dual-Regime / Akçelik / NCHRP 387):
+    Quando a demanda de tráfego excede a capacidade (V/C > 1.0), a BPR padrão
+    subestima a formação de filas estagnadas. A MBPR incorpora o atraso físico de
+    acumulação e dispersão de filas veiculares.
 
-2. PENALIDADE DE INTERSEÇÃO E SEMÁFOROS (Webster / HCM Delay Model):
-   Em cidades reais como Aracaju, a maior parte do atraso urbano não ocorre no
-   meio do quarteirão, mas sim nos cruzamentos semaforizados (fase vermelha).
-   A MBPR consulta a base cadastral de semáforos de Aracaju (traffic_signals) e
-   soma o atraso de ciclo semafórico dependente da taxa de saturação.
+    2. PENALIDADE DE INTERSEÇÃO E SEMÁFOROS (Webster / HCM Delay Model):
+    Em cidades reais como Aracaju, a maior parte do atraso urbano não ocorre no
+    meio do quarteirão, mas sim nos cruzamentos semaforizados (fase vermelha).
+    A MBPR consulta a base cadastral de semáforos de Aracaju (traffic_signals) e
+    soma o atraso de ciclo semafórico dependente da taxa de saturação.
 
-                      t_MBPR = t_trecho(V/C) + d_semaforo(V/C)
+                        t_MBPR = t_trecho(V/C) + d_semaforo(V/C)
 
-Este programa executa simultaneamente as 3 metodologias (Dijkstra, BPR e MBPR)
-e produz uma simulação comparativa com uma corrida de 3 veículos até a UFS.
-================================================================================
-"""
+    Este programa executa simultaneamente as 3 metodologias (Dijkstra, BPR e MBPR)
+    e produz uma simulação comparativa com uma corrida de 3 veículos até a UFS.
+    ================================================================================
+    """
 
 import sys
 import os

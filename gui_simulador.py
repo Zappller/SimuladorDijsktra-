@@ -20,8 +20,9 @@ class SimuladorApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Simulador de Rotas: Aracaju ➔ UFS (Dijkstra | BPR | MBPR)")
-        self.geometry("980x720")
-        self.minsize(850, 600)
+        self.geometry("1040x750")
+        self.minsize(880, 620)
+        self.resizable(True, True)
         self.configure(bg="#0f172a")
 
         self.G = None
@@ -56,9 +57,9 @@ class SimuladorApp(tk.Tk):
         )
         lbl_sub.pack(anchor="w")
 
-        # Container Principal
-        corpo = tk.Frame(self, bg="#0f172a", padx=20, pady=15)
-        corpo.pack(fill="both", expand=True)
+        # Container Principal com Divisor Ajustável (PanedWindow Horizontal)
+        corpo = tk.PanedWindow(self, orient="horizontal", bg="#0f172a", sashrelief="raised", sashwidth=6)
+        corpo.pack(fill="both", expand=True, padx=15, pady=12)
 
         # Painel Esquerdo: Controles
         painel_ctrl = tk.LabelFrame(
@@ -70,7 +71,7 @@ class SimuladorApp(tk.Tk):
             padx=15,
             pady=15
         )
-        painel_ctrl.pack(side="left", fill="y", padx=(0, 15))
+        corpo.add(painel_ctrl, minsize=320, stretch="never")
 
         # Ponto de Partida
         tk.Label(painel_ctrl, text="Ponto de Partida (Origem A):", font=(
@@ -118,19 +119,19 @@ class SimuladorApp(tk.Tk):
             "Segoe UI", 10, "bold"), bg="#1e293b", fg="#cbd5e1").pack(anchor="w", pady=(10, 4))
 
         self.btn_sim_dijk = tk.Button(
-            painel_ctrl, text="🗺️ Simulação Dijkstra (1 Carro)", font=("Segoe UI", 9), bg="#2563eb", fg="#ffffff",
+            painel_ctrl, text=" Simulação Dijkstra (1 Carro)", font=("Segoe UI", 9), bg="#2563eb", fg="#ffffff",
             cursor="hand2", pady=5, command=lambda: self._abrir_html("simulacao_dijkstra.html")
         )
         self.btn_sim_dijk.pack(fill="x", pady=3)
 
         self.btn_sim_bpr = tk.Button(
-            painel_ctrl, text="🏎️ Simulação BPR (2 Carros)", font=("Segoe UI", 9), bg="#d97706", fg="#ffffff",
+            painel_ctrl, text=" Simulação BPR (2 Carros)", font=("Segoe UI", 9), bg="#d97706", fg="#ffffff",
             cursor="hand2", pady=5, command=lambda: self._abrir_html("simulacao_bpr.html")
         )
         self.btn_sim_bpr.pack(fill="x", pady=3)
 
         self.btn_sim_mbpr = tk.Button(
-            painel_ctrl, text="🏁 Simulação MBPR (3 Carros + Semáforos)", font=("Segoe UI", 9, "bold"), bg="#059669", fg="#ffffff",
+            painel_ctrl, text=" Simulação MBPR (3 Carros + Semáforos)", font=("Segoe UI", 9, "bold"), bg="#059669", fg="#ffffff",
             cursor="hand2", pady=7, command=lambda: self._abrir_html("simulacao_mbpr.html")
         )
         self.btn_sim_mbpr.pack(fill="x", pady=3)
@@ -140,39 +141,63 @@ class SimuladorApp(tk.Tk):
             "Segoe UI", 9), bg="#1e293b", fg="#facc15")
         self.lbl_status.pack(side="bottom", fill="x", pady=(15, 0))
 
-        # Painel Direito: Tabela e Diagnóstico
+        # Painel Direito: Tabela e Diagnóstico (Redimensionável)
         painel_res = tk.LabelFrame(
             corpo,
             text=" Resultados Analíticos e Métricas Comparativas ",
             font=("Segoe UI", 11, "bold"),
             bg="#1e293b",
             fg="#e2e8f0",
-            padx=15,
-            pady=15
+            padx=12,
+            pady=12
         )
-        painel_res.pack(side="right", fill="both", expand=True)
+        corpo.add(painel_res, minsize=460, stretch="always")
 
-        # Treeview (Tabela Comparativa)
+        # Divisor interno vertical para redimensionamento entre a Tabela e o Diagnóstico
+        paned_res_interno = tk.PanedWindow(
+            painel_res, orient="vertical", bg="#1e293b", sashrelief="raised", sashwidth=6
+        )
+        paned_res_interno.pack(fill="both", expand=True)
+
+        # Subpainel Superior: Tabela Treeview
+        frame_tabela = tk.Frame(paned_res_interno, bg="#1e293b")
         colunas = ("metrica", "dijkstra", "bpr", "mbpr")
         self.tabela = ttk.Treeview(
-            painel_res, columns=colunas, show="headings", height=8)
+            frame_tabela, columns=colunas, show="headings", height=8
+        )
         self.tabela.heading("metrica", text="Métrica de Engenharia de Tráfego")
         self.tabela.heading("dijkstra", text="1. Dijkstra Clássico")
         self.tabela.heading("bpr", text="2. BPR Tradicional")
         self.tabela.heading("mbpr", text="3. MBPR (Modificado)")
 
-        self.tabela.column("metrica", width=240, anchor="w")
-        self.tabela.column("dijkstra", width=120, anchor="center")
-        self.tabela.column("bpr", width=120, anchor="center")
-        self.tabela.column("mbpr", width=130, anchor="center")
-        self.tabela.pack(fill="x", pady=(0, 15))
+        self.tabela.column("metrica", width=250, anchor="w")
+        self.tabela.column("dijkstra", width=130, anchor="center")
+        self.tabela.column("bpr", width=130, anchor="center")
+        self.tabela.column("mbpr", width=140, anchor="center")
+        self.tabela.pack(fill="both", expand=True)
+        paned_res_interno.add(frame_tabela, minsize=140, stretch="always")
 
-        # Caixa de Diagnóstico
-        tk.Label(painel_res, text="Diagnóstico Científico da Comparação:", font=(
-            "Segoe UI", 10, "bold"), bg="#1e293b", fg="#cbd5e1").pack(anchor="w", pady=(0, 4))
-        self.txt_diagnostico = tk.Text(painel_res, bg="#0f172a", fg="#f8fafc", font=(
-            "Consolas", 10), wrap="word", relief="flat", padx=10, pady=10)
-        self.txt_diagnostico.pack(fill="both", expand=True)
+        # Subpainel Inferior: Diagnóstico Científico com Barra de Rolagem
+        frame_diag = tk.Frame(paned_res_interno, bg="#1e293b")
+        tk.Label(
+            frame_diag, text="Diagnóstico Científico da Comparação:",
+            font=("Segoe UI", 10, "bold"), bg="#1e293b", fg="#cbd5e1"
+        ).pack(anchor="w", pady=(8, 4))
+
+        diag_box = tk.Frame(frame_diag, bg="#0f172a")
+        diag_box.pack(fill="both", expand=True)
+
+        scroll_diag = ttk.Scrollbar(diag_box, orient="vertical")
+        scroll_diag.pack(side="right", fill="y")
+
+        self.txt_diagnostico = tk.Text(
+            diag_box, bg="#0f172a", fg="#f8fafc", font=("Consolas", 10),
+            wrap="word", relief="flat", padx=10, pady=10, yscrollcommand=scroll_diag.set
+        )
+        self.txt_diagnostico.pack(side="left", fill="both", expand=True)
+        scroll_diag.config(command=self.txt_diagnostico.yview)
+
+        paned_res_interno.add(frame_diag, minsize=180, stretch="always")
 
     def _carregar_grafo(self):
         try:

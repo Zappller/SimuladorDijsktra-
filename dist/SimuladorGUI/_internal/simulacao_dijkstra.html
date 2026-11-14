@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulação: Rota Dijkstra (Aracaju ➔ UFS)</title>
+    <!-- Leaflet CSS & JS Oficiais (CDN cdnjs) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e2e8f0;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        /* Animação SVG nativa para a linha de rota */
+        .rota-animada {
+            stroke-dasharray: 12, 12;
+            animation: dashRota 1.2s linear infinite;
+        }
+        @keyframes dashRota {
+            to { stroke-dashoffset: -24; }
+        }
+        /* HUD Flutuante */
+        .hud-painel {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.96);
+            color: #f8fafc;
+            padding: 20px 24px;
+            border-radius: 14px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            min-width: 350px;
+            max-width: 440px;
+            border: 1px solid rgba(255,255,255,0.12);
+            backdrop-filter: blur(10px);
+        }
+        .hud-titulo {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #38bdf8;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .hud-metricas {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .hud-caixa {
+            background: rgba(255,255,255,0.06);
+            padding: 8px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .hud-caixa .label {
+            font-size: 11px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .hud-caixa .valor {
+            font-size: 16px;
+            font-weight: 700;
+            color: #4ade80;
+            margin-top: 2px;
+        }
+        .hud-controles {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .hud-btn {
+            background: #2563eb;
+            color: #fff;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hud-btn:hover {
+            background: #1d4ed8;
+            transform: translateY(-1px);
+        }
+        .hud-btn-reset {
+            background: #475569;
+        }
+        .hud-btn-reset:hover {
+            background: #334155;
+        }
+        .hud-select {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid #475569;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+        }
+        .hud-progresso {
+            width: 100%;
+            height: 6px;
+            background: #334155;
+            border-radius: 3px;
+            margin-top: 14px;
+            overflow: hidden;
+        }
+        .hud-barra {
+            width: 0%;
+            height: 100%;
+            background: #38bdf8;
+            transition: width 0.15s ease-out;
+        }
+        /* Marcador de Carro com Badge de Estado Semafórico */
+        .car-marker-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 140px;
+            margin-left: -70px;
+            margin-top: -42px;
+            pointer-events: none;
+        }
+        .car-badge {
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            color: #fff;
+            white-space: nowrap;
+            box-shadow: 0 3px 8px rgba(0,0,0,0.5);
+            margin-bottom: 2px;
+            transition: all 0.2s ease;
+        }
+        .badge-green {
+            background: #16a34a;
+            border: 1px solid #4ade80;
+        }
+        .badge-yellow {
+            background: #d97706;
+            border: 1px solid #fde047;
+            animation: pulseYellow 0.6s infinite alternate;
+        }
+        .badge-red {
+            background: #dc2626;
+            border: 1px solid #f87171;
+            animation: pulseRed 0.6s infinite alternate;
+        }
+        @keyframes pulseRed {
+            from { transform: scale(1); box-shadow: 0 0 5px #ef4444; }
+            to { transform: scale(1.08); box-shadow: 0 0 14px #ef4444; }
+        }
+        @keyframes pulseYellow {
+            from { transform: scale(1); }
+            to { transform: scale(1.06); }
+        }
+        .car-icon-body {
+            font-size: 28px;
+            line-height: 1;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
+        }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+
+    <div class="hud-painel">
+        <div class="hud-titulo">
+            <span>🚗 SIMULAÇÃO: DIJKSTRA</span>
+            <span style="font-size: 13px; color: #94a3b8;">10.69 km</span>
+        </div>
+        
+        <div class="hud-metricas">
+            <div class="hud-caixa">
+                <div class="label">Distância Percorrida</div>
+                <div class="valor" id="dist-atual">0.00 km</div>
+            </div>
+            <div class="hud-caixa">
+                <div class="label">Semáforos na Rota</div>
+                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / 1 🛑</div>
+            </div>
+            <div class="hud-caixa" style="grid-column: span 2;">
+                <div class="label">Status do Veículo</div>
+                <div class="valor" id="status-veiculo" style="font-size: 13px; color: #4ade80;">
+                    🟢 Pronto para iniciar
+                </div>
+            </div>
+            <div class="hud-caixa" style="grid-column: span 2;">
+                <div class="label">Via Atual</div>
+                <div class="valor" id="via-atual" style="font-size: 13px; color: #f8fafc; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                    Clique em Iniciar para começar...
+                </div>
+            </div>
+        </div>
+
+        <div class="hud-controles">
+            <button class="hud-btn" id="btn-play">▶️ Iniciar</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <select class="hud-select" id="sel-vel">
+                <option value="1">1x</option>
+                <option value="3" selected>3x</option>
+                <option value="8">8x</option>
+                <option value="15">15x</option>
+            </select>
+        </div>
+
+        <div class="hud-progresso">
+            <div class="hud-barra" id="hud-barra"></div>
+        </div>
+    </div>
+
+    <script>
+        var coords = [[-10.946093350002837, -37.05120046039128], [-10.9445139, -37.051154], [-10.9530168, -37.0522668], [-10.9548466, -37.0535293], [-10.9547793, -37.0536845], [-10.9545357, -37.0540332], [-10.9540593, -37.0547479], [-10.953682, -37.0552889], [-10.9533495, -37.055824], [-10.9530816, -37.0563748], [-10.952996, -37.0565643], [-10.952733, -37.0573205], [-10.9525273, -37.0581387], [-10.9523956, -37.0588146], [-10.9517935, -37.0621417], [-10.9517144, -37.0625269], [-10.9514589, -37.0638716], [-10.9514447, -37.0639631], [-10.9513154, -37.0646813], [-10.9504959, -37.0686313], [-10.9485422, -37.071723], [-10.9474948, -37.0727869], [-10.9471242, -37.0731277], [-10.9457621, -37.0744526], [-10.9454397, -37.0747701], [-10.9447663, -37.075453], [-10.9446108, -37.0756107], [-10.9422321, -37.0779553], [-10.9422676, -37.0774412], [-10.9429868, -37.0772732], [-10.9431648, -37.0781211], [-10.9431381, -37.0782073], [-10.9430606, -37.0786082], [-10.942382, -37.0792864], [-10.941892, -37.0797729], [-10.9418528, -37.0798853], [-10.9419104, -37.0801025], [-10.9419655, -37.0803105], [-10.9422893, -37.0816342], [-10.9425451, -37.0826303], [-10.942653, -37.0830702], [-10.9430244, -37.0845064], [-10.9431711, -37.0851078], [-10.9431798, -37.085142], [-10.9435131, -37.0864493], [-10.9429315, -37.0865803], [-10.9424154, -37.0868722], [-10.9419573, -37.0875244], [-10.9418397, -37.0875369], [-10.9415341, -37.0875015], [-10.9403068, -37.0875509], [-10.9403218, -37.0886139], [-10.9372161, -37.0895161], [-10.9343357, -37.0901781], [-10.9342907, -37.090341], [-10.9347979, -37.0918875], [-10.9341971, -37.0940056], [-10.9341735, -37.0943083], [-10.936016, -37.0986368], [-10.936121, -37.0993526], [-10.9360587, -37.0998797], [-10.9359077, -37.100122], [-10.9357784, -37.1002632], [-10.9354732, -37.1005966], [-10.9351447, -37.1009251], [-10.9346665, -37.1012618], [-10.9341784, -37.1014938], [-10.9338891, -37.1017654], [-10.9338404, -37.1023998], [-10.9337741, -37.1029314], [-10.9337406, -37.1032094], [-10.9337091, -37.10347], [-10.9336741, -37.1037957], [-10.9336508, -37.1039991], [-10.9333368, -37.1057171], [-10.933053, -37.1057352], [-10.93308, -37.1063092], [-10.9330701, -37.1068527], [-10.9330685, -37.10743], [-10.9330655, -37.1080285], [-10.9325177, -37.1080144], [-10.9326073, -37.1089324], [-10.9305734, -37.1102109], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
+        var vias = ["Avenida Paulo Barreto de Menezes", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Via sem nome", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Rua Professor Henrique de Souza", "Rua Professor Henrique de Souza", "Via sem nome", "Via sem nome", "Rua Ant\u00f4nio Valdione de S\u00e1", "Rua Cinco", "Rua Luiz Ant\u00f4nio Silveira Teixeira", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua F", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua B", "Rua I", "Rua A", "Avenida Chesf", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas"];
+        var semaforos = [{"lat": -10.9445139, "lon": -37.051154, "node": "7233527361"}, {"lat": -10.941892, "lon": -37.0797729, "node": "939897250"}];
+        var paradas = new Set([34]);
+        var totalDistKm = 10.690451253309313;
+        var totalTempoMin = 15.287142211246142;
+
+        // 1. Inicializar Mapa Leaflet
+        var map = L.map('map', {
+            center: [-10.941186243750032, -37.08435597227717],
+            zoom: 13,
+            zoomControl: true
+        });
+
+        // 2. Camadas de Mapa Base (Sem erro 403 do OpenStreetMap)
+        var mapaRuas = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Street Map'
+        }).addTo(map);
+
+        var mapaSatelite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 19,
+            attribution: 'Tiles &copy; Esri &mdash; Satellite'
+        });
+
+        var mapaCarto = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            subdomains: 'abcd',
+            attribution: '&copy; CARTO'
+        });
+
+        L.control.layers({
+            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
+            "🛰️ Imagem de Satélite": mapaSatelite,
+            "🏙️ Mapa Carto": mapaCarto
+        }, null, { position: 'topright' }).addTo(map);
+
+        // 3. Traçado da Rota com Classe CSS Animada
+        var polyline = L.polyline(coords, {
+            color: '#2563eb',
+            weight: 6,
+            opacity: 0.9,
+            className: 'rota-animada'
+        }).addTo(map);
+
+        map.fitBounds(polyline.getBounds(), { padding: [60, 60] });
+
+        // 4. Marcadores de Semáforos Reais na Rota
+        semaforos.forEach(function(sem) {
+            L.circleMarker([sem.lat, sem.lon], {
+                radius: 6,
+                color: '#b91c1c',
+                fillColor: '#ef4444',
+                fillOpacity: 0.85,
+                weight: 2
+            }).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+        });
+
+        // 5. Marcador Origem (Ponto A)
+        var iconOrigem = L.divIcon({
+            className: 'custom-pin',
+            html: '<div style="background:#22c55e; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:16px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">A</div>',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+        });
+        L.marker(coords[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Ponto A (Origem):</b><br>Parque da Sementeira (Av. Beira Mar / 13 de Julho)');
+
+        // 6. Marcador Destino (UFS)
+        var iconDestino = L.divIcon({
+            className: 'custom-pin',
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">🎓</div>',
+            iconSize: [34, 34],
+            iconAnchor: [17, 17]
+        });
+        L.marker(coords[coords.length - 1], { icon: iconDestino }).addTo(map).bindPopup('<b>Destino:</b><br>Universidade Federal de Sergipe (UFS - São Cristóvão)');
+
+        // 7. Veículo Animado com Badge Dinâmico de Semáforo
+        var carIcon = L.divIcon({
+            className: 'custom-car-div',
+            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">🟢 Pronto</div><div class="car-icon-body">🚗</div></div>',
+            iconSize: [0, 0]
+        });
+        var carMarker = L.marker(coords[0], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
+
+        // 8. Lógica de Simulação com Parada Real nos Semáforos
+        var currentIndex = 0;
+        var isRunning = false;
+        var timerId = null;
+        var waitTicks = 0;
+        var paradasFeitas = 0;
+        var visitados = new Set();
+
+        var btnPlay = document.getElementById('btn-play');
+        var btnReset = document.getElementById('btn-reset');
+        var selVel = document.getElementById('sel-vel');
+        var distAtual = document.getElementById('dist-atual');
+        var viaAtual = document.getElementById('via-atual');
+        var semAtual = document.getElementById('sem-atual');
+        var statusVeiculo = document.getElementById('status-veiculo');
+        var hudBarra = document.getElementById('hud-barra');
+
+        function step() {
+            if (!isRunning) return;
+
+            var carBadge = document.getElementById('car-badge');
+
+            // Se o carro está aguardando o semáforo abrir
+            if (waitTicks > 0) {
+                waitTicks--;
+                if (waitTicks === 1) {
+                    if (carBadge) {
+                        carBadge.className = 'car-badge badge-yellow';
+                        carBadge.innerText = '🟡 Abrindo...';
+                    }
+                    statusVeiculo.style.color = '#fde047';
+                    statusVeiculo.innerText = '🟡 Semáforo abrindo... Atenção!';
+                } else {
+                    if (carBadge) {
+                        carBadge.className = 'car-badge badge-red';
+                        carBadge.innerText = '🛑 Sinal Vermelho';
+                    }
+                    statusVeiculo.style.color = '#f87171';
+                    statusVeiculo.innerText = '🛑 Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
+                }
+            } else if (paradas.has(currentIndex) && !visitados.has(currentIndex)) {
+                // Chegou em um semáforo: inicia tempo de parada
+                visitados.add(currentIndex);
+                paradasFeitas++;
+                waitTicks = 10;
+                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' 🛑';
+                if (carBadge) {
+                    carBadge.className = 'car-badge badge-red';
+                    carBadge.innerText = '🛑 Sinal Vermelho';
+                }
+                statusVeiculo.style.color = '#f87171';
+                statusVeiculo.innerText = '🛑 Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
+            } else {
+                // Avanço normal de rota
+                if (currentIndex < coords.length - 1) {
+                    currentIndex++;
+                    var pAtual = coords[currentIndex];
+                    carMarker.setLatLng(pAtual);
+
+                    if (carBadge) {
+                        carBadge.className = 'car-badge badge-green';
+                        carBadge.innerText = '🟢 Em movimento';
+                    }
+                    statusVeiculo.style.color = '#4ade80';
+                    statusVeiculo.innerText = '🟢 Em movimento (Fluxo normal)';
+
+                    var pct = (currentIndex / (coords.length - 1)) * 100;
+                    hudBarra.style.width = pct + '%';
+
+                    var dKm = (currentIndex / (coords.length - 1)) * totalDistKm;
+                    distAtual.innerText = dKm.toFixed(2) + ' km';
+
+                    if (currentIndex - 1 < vias.length) {
+                        viaAtual.innerText = vias[currentIndex - 1];
+                    }
+                } else {
+                    isRunning = false;
+                    btnPlay.innerText = '▶️ Reiniciar';
+                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
+                    statusVeiculo.style.color = '#38bdf8';
+                    statusVeiculo.innerText = '🏁 Chegou ao Destino (Campus UFS)!';
+                    if (carBadge) {
+                        carBadge.className = 'car-badge badge-green';
+                        carBadge.innerText = '🏁 Chegou na UFS!';
+                    }
+                    hudBarra.style.width = '100%';
+                    return;
+                }
+            }
+
+            var velMult = parseFloat(selVel.value);
+            var delayMs = Math.max(25, 260 / velMult);
+            timerId = setTimeout(step, delayMs);
+        }
+
+        btnPlay.onclick = function() {
+            if (isRunning) {
+                isRunning = false;
+                clearTimeout(timerId);
+                btnPlay.innerText = '▶️ Continuar';
+            } else {
+                if (currentIndex >= coords.length - 1) {
+                    currentIndex = 0;
+                    visitados.clear();
+                    waitTicks = 0;
+                    paradasFeitas = 0;
+                }
+                isRunning = true;
+                btnPlay.innerText = '⏸️ Pausar';
+                step();
+            }
+        };
+
+        btnReset.onclick = function() {
+            isRunning = false;
+            clearTimeout(timerId);
+            currentIndex = 0;
+            waitTicks = 0;
+            paradasFeitas = 0;
+            visitados.clear();
+            carMarker.setLatLng(coords[0]);
+            hudBarra.style.width = '0%';
+            distAtual.innerText = '0.00 km';
+            semAtual.innerText = '0 / ' + paradas.size + ' 🛑';
+            viaAtual.innerText = 'Iniciando trajeto...';
+            statusVeiculo.style.color = '#4ade80';
+            statusVeiculo.innerText = '🟢 Pronto para iniciar';
+            var carBadge = document.getElementById('car-badge');
+            if (carBadge) {
+                carBadge.className = 'car-badge badge-green';
+                carBadge.innerText = '🟢 Pronto';
+            }
+            btnPlay.innerText = '▶️ Iniciar';
+        };
+    </script>
+</body>
+</html>
