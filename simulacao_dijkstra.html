@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulação: Rota Dijkstra (Aracaju ➔ UFS)</title>
+    <title>Simulação: Rota Dijkstra (Aracaju -> UFS)</title>
     <!-- Leaflet CSS & JS Oficiais (CDN cdnjs) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -188,6 +188,144 @@
             line-height: 1;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
         }
+    
+        /* ================= Tema retro Windows 95 ================= */
+        html, body {
+            font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+            background: #008080 !important;
+        }
+        .hud-painel {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+            padding: 3px 3px 10px 3px !important;
+            font-size: 12px !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 4px 4px 0 rgba(0,0,0,0.45) !important;
+        }
+        .hud-painel, .hud-painel * { color: #000 !important; }
+        .hud-painel > *:not(.hud-titulo) {
+            margin-left: 8px !important;
+            margin-right: 8px !important;
+        }
+        .hud-painel .hud-titulo {
+            background: linear-gradient(90deg, #000080, #1084d0) !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            padding: 4px 6px !important;
+            margin: 0 0 10px 0 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hud-painel .hud-titulo, .hud-painel .hud-titulo * { color: #fff !important; }
+        .hud-caixa, .card-rota {
+            background: #fff !important;
+            border-radius: 0 !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-caixa { border: none !important; padding: 6px 10px !important; }
+        .card-rota { border-left-width: 10px !important; padding: 8px 12px 8px 10px !important; }
+        .hud-caixa .label {
+            text-transform: none !important;
+            font-size: 11px !important;
+            font-weight: normal !important;
+        }
+        .hud-caixa .valor, .card-rota > div:last-child {
+            font-family: "Courier New", Courier, monospace !important;
+            font-weight: bold !important;
+        }
+        .hud-btn {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            padding: 6px 16px !important;
+            min-width: 84px;
+            justify-content: center;
+            transform: none !important;
+            transition: none !important;
+            cursor: default !important;
+        }
+        #btn-play { font-weight: bold !important; outline: 1px solid #000; }
+        .hud-btn:hover { background: #c0c0c0 !important; transform: none !important; }
+        .hud-btn:active {
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            padding: 7px 15px 5px 17px !important;
+        }
+        .hud-btn:focus-visible { outline: 1px dotted #000 !important; outline-offset: -5px; }
+        .hud-select {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            padding: 5px 6px !important;
+        }
+        .hud-progresso {
+            width: auto !important;
+            height: 20px !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+            padding: 3px !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-barra {
+            background: repeating-linear-gradient(90deg, #000080 0 9px, transparent 9px 11px) !important;
+        }
+        .legenda-trafego .dot { border-radius: 0 !important; border: 1px solid #000; }
+        .explicacao-mbpr {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        /* Etiqueta em cima dos carros */
+        .car-badge {
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.5) !important;
+            transition: none !important;
+        }
+        .badge-green { background: #008000 !important; color: #fff !important; animation: none !important; }
+        .badge-yellow { background: #ffff00 !important; color: #000 !important; animation: none !important; }
+        .badge-red { background: #ff0000 !important; color: #fff !important; animation: piscaRetro 0.8s steps(2, start) infinite !important; }
+        @keyframes piscaRetro { to { visibility: hidden; } }
+        /* Controles do Leaflet */
+        .leaflet-bar, .leaflet-control-layers, .leaflet-popup-content-wrapper {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 3px 3px 0 rgba(0,0,0,0.4) !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-bar a {
+            background: #c0c0c0 !important;
+            color: #000 !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #808080 !important;
+        }
+        .leaflet-popup-tip { background: #c0c0c0 !important; }
+        .leaflet-tooltip {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-control-attribution { background: #c0c0c0 !important; }
     </style>
 </head>
 <body>
@@ -206,12 +344,12 @@
             </div>
             <div class="hud-caixa">
                 <div class="label">Semáforos na Rota</div>
-                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / 1 🛑</div>
+                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / 1 </div>
             </div>
             <div class="hud-caixa" style="grid-column: span 2;">
                 <div class="label">Status do Veículo</div>
                 <div class="valor" id="status-veiculo" style="font-size: 13px; color: #4ade80;">
-                    🟢 Pronto para iniciar
+                    Pronto para iniciar
                 </div>
             </div>
             <div class="hud-caixa" style="grid-column: span 2;">
@@ -223,8 +361,8 @@
         </div>
 
         <div class="hud-controles">
-            <button class="hud-btn" id="btn-play">▶️ Iniciar</button>
-            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <button class="hud-btn" id="btn-play">Iniciar</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">Reset</button>
             <select class="hud-select" id="sel-vel">
                 <option value="1">1x</option>
                 <option value="3" selected>3x</option>
@@ -271,9 +409,9 @@
         });
 
         L.control.layers({
-            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
-            "🛰️ Imagem de Satélite": mapaSatelite,
-            "🏙️ Mapa Carto": mapaCarto
+            "Mapa de Ruas (Esri)": mapaRuas,
+            "Imagem de Satélite": mapaSatelite,
+            "Mapa Carto": mapaCarto
         }, null, { position: 'topright' }).addTo(map);
 
         // 3. Traçado da Rota com Classe CSS Animada
@@ -294,7 +432,7 @@
                 fillColor: '#ef4444',
                 fillOpacity: 0.85,
                 weight: 2
-            }).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+            }).addTo(map).bindTooltip('Semáforo (Cruzamento ' + sem.node + ')');
         });
 
         // 5. Marcador Origem (Ponto A)
@@ -309,7 +447,7 @@
         // 6. Marcador Destino (UFS)
         var iconDestino = L.divIcon({
             className: 'custom-pin',
-            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">🎓</div>',
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">B</div>',
             iconSize: [34, 34],
             iconAnchor: [17, 17]
         });
@@ -318,7 +456,7 @@
         // 7. Veículo Animado com Badge Dinâmico de Semáforo
         var carIcon = L.divIcon({
             className: 'custom-car-div',
-            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">🟢 Pronto</div><div class="car-icon-body">🚗</div></div>',
+            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">Pronto</div><div class="car-icon-body">🚗</div></div>',
             iconSize: [0, 0]
         });
         var carMarker = L.marker(coords[0], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
@@ -351,30 +489,30 @@
                 if (waitTicks === 1) {
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-yellow';
-                        carBadge.innerText = '🟡 Abrindo...';
+                        carBadge.innerText = 'Abrindo...';
                     }
                     statusVeiculo.style.color = '#fde047';
-                    statusVeiculo.innerText = '🟡 Semáforo abrindo... Atenção!';
+                    statusVeiculo.innerText = 'Semáforo abrindo... Atenção!';
                 } else {
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-red';
-                        carBadge.innerText = '🛑 Sinal Vermelho';
+                        carBadge.innerText = 'Sinal Vermelho';
                     }
                     statusVeiculo.style.color = '#f87171';
-                    statusVeiculo.innerText = '🛑 Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
+                    statusVeiculo.innerText = 'Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
                 }
             } else if (paradas.has(currentIndex) && !visitados.has(currentIndex)) {
                 // Chegou em um semáforo: inicia tempo de parada
                 visitados.add(currentIndex);
                 paradasFeitas++;
                 waitTicks = 10;
-                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' 🛑';
+                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' ';
                 if (carBadge) {
                     carBadge.className = 'car-badge badge-red';
-                    carBadge.innerText = '🛑 Sinal Vermelho';
+                    carBadge.innerText = 'Sinal Vermelho';
                 }
                 statusVeiculo.style.color = '#f87171';
-                statusVeiculo.innerText = '🛑 Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
+                statusVeiculo.innerText = 'Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
             } else {
                 // Avanço normal de rota
                 if (currentIndex < coords.length - 1) {
@@ -384,10 +522,10 @@
 
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-green';
-                        carBadge.innerText = '🟢 Em movimento';
+                        carBadge.innerText = 'Em movimento';
                     }
                     statusVeiculo.style.color = '#4ade80';
-                    statusVeiculo.innerText = '🟢 Em movimento (Fluxo normal)';
+                    statusVeiculo.innerText = 'Em movimento (Fluxo normal)';
 
                     var pct = (currentIndex / (coords.length - 1)) * 100;
                     hudBarra.style.width = pct + '%';
@@ -400,13 +538,13 @@
                     }
                 } else {
                     isRunning = false;
-                    btnPlay.innerText = '▶️ Reiniciar';
-                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
+                    btnPlay.innerText = 'Reiniciar';
+                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) ';
                     statusVeiculo.style.color = '#38bdf8';
-                    statusVeiculo.innerText = '🏁 Chegou ao Destino (Campus UFS)!';
+                    statusVeiculo.innerText = 'Chegou ao Destino (Campus UFS)!';
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-green';
-                        carBadge.innerText = '🏁 Chegou na UFS!';
+                        carBadge.innerText = 'Chegou na UFS!';
                     }
                     hudBarra.style.width = '100%';
                     return;
@@ -422,7 +560,7 @@
             if (isRunning) {
                 isRunning = false;
                 clearTimeout(timerId);
-                btnPlay.innerText = '▶️ Continuar';
+                btnPlay.innerText = 'Continuar';
             } else {
                 if (currentIndex >= coords.length - 1) {
                     currentIndex = 0;
@@ -431,7 +569,7 @@
                     paradasFeitas = 0;
                 }
                 isRunning = true;
-                btnPlay.innerText = '⏸️ Pausar';
+                btnPlay.innerText = 'Pausar';
                 step();
             }
         };
@@ -446,16 +584,16 @@
             carMarker.setLatLng(coords[0]);
             hudBarra.style.width = '0%';
             distAtual.innerText = '0.00 km';
-            semAtual.innerText = '0 / ' + paradas.size + ' 🛑';
+            semAtual.innerText = '0 / ' + paradas.size + ' ';
             viaAtual.innerText = 'Iniciando trajeto...';
             statusVeiculo.style.color = '#4ade80';
-            statusVeiculo.innerText = '🟢 Pronto para iniciar';
+            statusVeiculo.innerText = 'Pronto para iniciar';
             var carBadge = document.getElementById('car-badge');
             if (carBadge) {
                 carBadge.className = 'car-badge badge-green';
-                carBadge.innerText = '🟢 Pronto';
+                carBadge.innerText = 'Pronto';
             }
-            btnPlay.innerText = '▶️ Iniciar';
+            btnPlay.innerText = 'Iniciar';
         };
     </script>
 </body>

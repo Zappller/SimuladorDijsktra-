@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grande Prêmio das Rotas: Dijkstra vs BPR vs MBPR (Aracaju ➔ UFS)</title>
+    <title>Grande Prêmio das Rotas: Dijkstra vs BPR vs MBPR (Aracaju -> UFS)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <style>
@@ -145,19 +145,157 @@
             line-height: 1;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
         }
+    
+        /* ================= Tema retro Windows 95 ================= */
+        html, body {
+            font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+            background: #008080 !important;
+        }
+        .hud-painel {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+            padding: 3px 3px 10px 3px !important;
+            font-size: 12px !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 4px 4px 0 rgba(0,0,0,0.45) !important;
+        }
+        .hud-painel, .hud-painel * { color: #000 !important; }
+        .hud-painel > *:not(.hud-titulo) {
+            margin-left: 8px !important;
+            margin-right: 8px !important;
+        }
+        .hud-painel .hud-titulo {
+            background: linear-gradient(90deg, #000080, #1084d0) !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            padding: 4px 6px !important;
+            margin: 0 0 10px 0 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hud-painel .hud-titulo, .hud-painel .hud-titulo * { color: #fff !important; }
+        .hud-caixa, .card-rota {
+            background: #fff !important;
+            border-radius: 0 !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-caixa { border: none !important; padding: 6px 10px !important; }
+        .card-rota { border-left-width: 10px !important; padding: 8px 12px 8px 10px !important; }
+        .hud-caixa .label {
+            text-transform: none !important;
+            font-size: 11px !important;
+            font-weight: normal !important;
+        }
+        .hud-caixa .valor, .card-rota > div:last-child {
+            font-family: "Courier New", Courier, monospace !important;
+            font-weight: bold !important;
+        }
+        .hud-btn {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            padding: 6px 16px !important;
+            min-width: 84px;
+            justify-content: center;
+            transform: none !important;
+            transition: none !important;
+            cursor: default !important;
+        }
+        #btn-play { font-weight: bold !important; outline: 1px solid #000; }
+        .hud-btn:hover { background: #c0c0c0 !important; transform: none !important; }
+        .hud-btn:active {
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            padding: 7px 15px 5px 17px !important;
+        }
+        .hud-btn:focus-visible { outline: 1px dotted #000 !important; outline-offset: -5px; }
+        .hud-select {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            padding: 5px 6px !important;
+        }
+        .hud-progresso {
+            width: auto !important;
+            height: 20px !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+            padding: 3px !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-barra {
+            background: repeating-linear-gradient(90deg, #000080 0 9px, transparent 9px 11px) !important;
+        }
+        .legenda-trafego .dot { border-radius: 0 !important; border: 1px solid #000; }
+        .explicacao-mbpr {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        /* Etiqueta em cima dos carros */
+        .car-badge {
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.5) !important;
+            transition: none !important;
+        }
+        .badge-green { background: #008000 !important; color: #fff !important; animation: none !important; }
+        .badge-yellow { background: #ffff00 !important; color: #000 !important; animation: none !important; }
+        .badge-red { background: #ff0000 !important; color: #fff !important; animation: piscaRetro 0.8s steps(2, start) infinite !important; }
+        @keyframes piscaRetro { to { visibility: hidden; } }
+        /* Controles do Leaflet */
+        .leaflet-bar, .leaflet-control-layers, .leaflet-popup-content-wrapper {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 3px 3px 0 rgba(0,0,0,0.4) !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-bar a {
+            background: #c0c0c0 !important;
+            color: #000 !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #808080 !important;
+        }
+        .leaflet-popup-tip { background: #c0c0c0 !important; }
+        .leaflet-tooltip {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-control-attribution { background: #c0c0c0 !important; }
     </style>
 </head>
 <body>
     <div id="map"></div>
 
     <div class="hud-painel">
-        <div class="hud-titulo">🏁 GRANDE PRÊMIO DE ROTAS: ARACAJU ➔ UFS</div>
+        <div class="hud-titulo">GRANDE PRÊMIO DE ROTAS: ARACAJU -> UFS</div>
 
         <div class="card-rota card-dijkstra">
             <div>
                 <b>🚗 Dijkstra Clássico</b><br>
-                <small>9.73 km | 🛑 1 semáforos</small><br>
-                <span id="status-dijk" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
+                <small>9.73 km | 1 semáforos</small><br>
+                <span id="status-dijk" style="font-size: 11px; font-weight: bold; color: #4ade80;">Pronto</span>
             </div>
             <div style="text-align: right; color: #ef4444; font-weight: 700;">
                 19.9 min
@@ -167,8 +305,8 @@
         <div class="card-rota card-bpr">
             <div>
                 <b>🚙 BPR Tradicional</b><br>
-                <small>9.85 km | 🛑 1 semáforos</small><br>
-                <span id="status-bpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
+                <small>9.85 km | 1 semáforos</small><br>
+                <span id="status-bpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">Pronto</span>
             </div>
             <div style="text-align: right; color: #f59e0b; font-weight: 700;">
                 19.8 min
@@ -177,9 +315,9 @@
 
         <div class="card-rota card-mbpr">
             <div>
-                <b>🏎️ MBPR (Modificado)</b> 🏆<br>
-                <small>9.82 km | 🛑 0 semáforos</small><br>
-                <span id="status-mbpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">🟢 Pronto</span>
+                <b>🏎️ MBPR (Modificado)</b> <br>
+                <small>9.82 km | 0 semáforos</small><br>
+                <span id="status-mbpr" style="font-size: 11px; font-weight: bold; color: #4ade80;">Pronto</span>
             </div>
             <div style="text-align: right; color: #22c55e; font-weight: 700; font-size: 15px;">
                 19.8 min
@@ -187,12 +325,12 @@
         </div>
 
         <div class="explicacao-mbpr">
-            💡 <b>Por que o MBPR vence?</b> O MBPR desviou de 1 cruzamentos semaforizados e das vias com filas em supersaturação, economizando 0.2 minutos!
+            <b>Por que o MBPR vence?</b> O MBPR desviou de 1 cruzamentos semaforizados e das vias com filas em supersaturação, economizando 0.2 minutos!
         </div>
 
         <div class="hud-controles">
-            <button class="hud-btn" id="btn-play">▶️ Iniciar Simulação dos 3</button>
-            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <button class="hud-btn" id="btn-play">Iniciar Simulação dos 3</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">Reset</button>
             <select class="hud-select" id="sel-vel">
                 <option value="1">1x</option>
                 <option value="3" selected>3x</option>
@@ -232,9 +370,9 @@
         });
 
         L.control.layers({
-            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
-            "🛰️ Imagem de Satélite": mapaSatelite,
-            "🏙️ Mapa Carto": mapaCarto
+            "Mapa de Ruas (Esri)": mapaRuas,
+            "Imagem de Satélite": mapaSatelite,
+            "Mapa Carto": mapaCarto
         }, null, { position: 'topright' }).addTo(map);
 
         // Camada de tráfego
@@ -250,7 +388,7 @@
                 fillColor: '#e74c3c',
                 fillOpacity: 0.9,
                 weight: 2
-            }).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+            }).addTo(map).bindTooltip('Semáforo (Cruzamento ' + sem.node + ')');
         });
 
         // Rota 1: Dijkstra (Vermelho)
@@ -277,7 +415,7 @@
         L.marker(coordsDijk[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Origem:</b> Parque da Sementeira (Av. Beira Mar / 13 de Julho)');
 
         var iconDestino = L.divIcon({
-            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid #fff; box-shadow:0 3px 6px rgba(0,0,0,0.4);">🎓</div>',
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:32px; height:32px; display:flex; align-items:center; justify-content:center; font-weight:bold; border:2px solid #fff; box-shadow:0 3px 6px rgba(0,0,0,0.4);">B</div>',
             iconSize: [32, 32], iconAnchor: [16, 16]
         });
         L.marker(coordsDijk[coordsDijk.length - 1], { icon: iconDestino }).addTo(map).bindPopup('<b>Destino:</b> Universidade Federal de Sergipe (UFS - São Cristóvão)');
@@ -304,7 +442,7 @@
         var carMbpr = L.marker(coordsMbpr[0], {
             icon: L.divIcon({
                 className: 'custom-car-div',
-                html: '<div class="car-marker-container"><div id="badge-mbpr" class="car-badge badge-green">🏎️ MBPR 🏆</div><div class="car-icon-body">🏎️</div></div>',
+                html: '<div class="car-marker-container"><div id="badge-mbpr" class="car-badge badge-green">🏎️ MBPR </div><div class="car-icon-body">🏎️</div></div>',
                 iconSize: [0, 0]
             }),
             zIndexOffset: 1000
@@ -365,18 +503,18 @@
                 if (waitDijk > 0) {
                     waitDijk--;
                     if (waitDijk === 1) {
-                        if (bDijk) { bDijk.className = 'car-badge badge-yellow'; bDijk.innerText = '🟡 Abrindo...'; }
-                        if (sDijk) { sDijk.style.color = '#fde047'; sDijk.innerText = '🟡 Sinal abrindo...'; }
+                        if (bDijk) { bDijk.className = 'car-badge badge-yellow'; bDijk.innerText = 'Abrindo...'; }
+                        if (sDijk) { sDijk.style.color = '#fde047'; sDijk.innerText = 'Sinal abrindo...'; }
                     } else {
-                        if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }
-                        if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
+                        if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = 'Sinal Vermelho'; }
+                        if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = 'Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
                     }
                 } else if (paradasDijk.has(iDijk) && !visitedDijk.has(iDijk)) {
                     visitedDijk.add(iDijk);
                     paradasFeitasDijk++;
                     waitDijk = 10;
-                    if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = '🛑 Sinal Vermelho'; }
-                    if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = '🛑 Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
+                    if (bDijk) { bDijk.className = 'car-badge badge-red'; bDijk.innerText = 'Sinal Vermelho'; }
+                    if (sDijk) { sDijk.style.color = '#f87171'; sDijk.innerText = 'Parado no sinal (' + paradasFeitasDijk + '/' + paradasDijk.size + ')'; }
                 } else {
                     progDijk += stepRateDijk;
                     var nextDijk = Math.min(coordsDijk.length - 1, Math.floor(progDijk));
@@ -385,11 +523,11 @@
                         carDijk.setLatLng(coordsDijk[iDijk]);
                     }
                     if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }
-                    if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Em movimento'; }
+                    if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = 'Em movimento'; }
                 }
             } else {
-                if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🏁 Chegou na UFS!'; }
-                if (sDijk) { sDijk.style.color = '#38bdf8'; sDijk.innerText = '🏁 Chegou ao Campus UFS!'; }
+                if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = 'Chegou na UFS!'; }
+                if (sDijk) { sDijk.style.color = '#38bdf8'; sDijk.innerText = 'Chegou ao Campus UFS!'; }
             }
 
             // --- 2. BPR ---
@@ -397,18 +535,18 @@
                 if (waitBpr > 0) {
                     waitBpr--;
                     if (waitBpr === 1) {
-                        if (bBpr) { bBpr.className = 'car-badge badge-yellow'; bBpr.innerText = '🟡 Abrindo...'; }
-                        if (sBpr) { sBpr.style.color = '#fde047'; sBpr.innerText = '🟡 Sinal abrindo...'; }
+                        if (bBpr) { bBpr.className = 'car-badge badge-yellow'; bBpr.innerText = 'Abrindo...'; }
+                        if (sBpr) { sBpr.style.color = '#fde047'; sBpr.innerText = 'Sinal abrindo...'; }
                     } else {
-                        if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }
-                        if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
+                        if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = 'Sinal Vermelho'; }
+                        if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = 'Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
                     }
                 } else if (paradasBpr.has(iBpr) && !visitedBpr.has(iBpr)) {
                     visitedBpr.add(iBpr);
                     paradasFeitasBpr++;
                     waitBpr = 10;
-                    if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = '🛑 Sinal Vermelho'; }
-                    if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = '🛑 Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
+                    if (bBpr) { bBpr.className = 'car-badge badge-red'; bBpr.innerText = 'Sinal Vermelho'; }
+                    if (sBpr) { sBpr.style.color = '#f87171'; sBpr.innerText = 'Parado no sinal (' + paradasFeitasBpr + '/' + paradasBpr.size + ')'; }
                 } else {
                     progBpr += stepRateBpr;
                     var nextBpr = Math.min(coordsBpr.length - 1, Math.floor(progBpr));
@@ -417,11 +555,11 @@
                         carBpr.setLatLng(coordsBpr[iBpr]);
                     }
                     if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }
-                    if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Em movimento'; }
+                    if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = 'Em movimento'; }
                 }
             } else {
-                if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🏁 Chegou na UFS!'; }
-                if (sBpr) { sBpr.style.color = '#38bdf8'; sBpr.innerText = '🏁 Chegou ao Campus UFS!'; }
+                if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = 'Chegou na UFS!'; }
+                if (sBpr) { sBpr.style.color = '#38bdf8'; sBpr.innerText = 'Chegou ao Campus UFS!'; }
             }
 
             // --- 3. MBPR ---
@@ -429,18 +567,18 @@
                 if (waitMbpr > 0) {
                     waitMbpr--;
                     if (waitMbpr === 1) {
-                        if (bMbpr) { bMbpr.className = 'car-badge badge-yellow'; bMbpr.innerText = '🟡 Abrindo...'; }
-                        if (sMbpr) { sMbpr.style.color = '#fde047'; sMbpr.innerText = '🟡 Sinal abrindo...'; }
+                        if (bMbpr) { bMbpr.className = 'car-badge badge-yellow'; bMbpr.innerText = 'Abrindo...'; }
+                        if (sMbpr) { sMbpr.style.color = '#fde047'; sMbpr.innerText = 'Sinal abrindo...'; }
                     } else {
-                        if (bMbpr) { bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = '🛑 Sinal Vermelho'; }
-                        if (sMbpr) { sMbpr.style.color = '#f87171'; sMbpr.innerText = '🛑 Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }
+                        if (bMbpr) { bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = 'Sinal Vermelho'; }
+                        if (sMbpr) { sMbpr.style.color = '#f87171'; sMbpr.innerText = 'Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }
                     }
                 } else if (paradasMbpr.has(iMbpr) && !visitedMbpr.has(iMbpr)) {
                     visitedMbpr.add(iMbpr);
                     paradasFeitasMbpr++;
                     waitMbpr = 10;
-                    if (bMbpr) { bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = '🛑 Sinal Vermelho'; }
-                    if (sMbpr) { sMbpr.style.color = '#f87171'; sMbpr.innerText = '🛑 Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }
+                    if (bMbpr) { bMbpr.className = 'car-badge badge-red'; bMbpr.innerText = 'Sinal Vermelho'; }
+                    if (sMbpr) { sMbpr.style.color = '#f87171'; sMbpr.innerText = 'Parado no sinal (' + paradasFeitasMbpr + '/' + paradasMbpr.size + ')'; }
                 } else {
                     progMbpr += stepRateMbpr;
                     var nextMbpr = Math.min(coordsMbpr.length - 1, Math.floor(progMbpr));
@@ -448,12 +586,12 @@
                         iMbpr = nextMbpr;
                         carMbpr.setLatLng(coordsMbpr[iMbpr]);
                     }
-                    if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR 🏆'; }
-                    if (sMbpr) { sMbpr.style.color = '#4ade80'; sMbpr.innerText = '🟢 Em movimento livre'; }
+                    if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR '; }
+                    if (sMbpr) { sMbpr.style.color = '#4ade80'; sMbpr.innerText = 'Em movimento livre'; }
                 }
             } else {
-                if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏆 Vencedor UFS!'; }
-                if (sMbpr) { sMbpr.style.color = '#22c55e'; sMbpr.innerText = '🏆 1º LUGAR! Chegou à UFS!'; }
+                if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = 'Vencedor!'; }
+                if (sMbpr) { sMbpr.style.color = '#22c55e'; sMbpr.innerText = '1º LUGAR! Chegou à UFS!'; }
             }
 
             if (!finDijk || !finBpr || !finMbpr) {
@@ -461,7 +599,7 @@
                 timerId = setTimeout(stepRace3, Math.max(20, 220 / vel));
             } else {
                 isRunning = false;
-                btnPlay.innerText = '▶️ Reiniciar';
+                btnPlay.innerText = 'Reiniciar';
             }
         }
 
@@ -469,7 +607,7 @@
             if (isRunning) {
                 isRunning = false;
                 clearTimeout(timerId);
-                btnPlay.innerText = '▶️ Continuar';
+                btnPlay.innerText = 'Continuar';
             } else {
                 if (iDijk >= coordsDijk.length - 1 && iMbpr >= coordsMbpr.length - 1) {
                     iDijk = 0; iBpr = 0; iMbpr = 0;
@@ -479,7 +617,7 @@
                     visitedDijk.clear(); visitedBpr.clear(); visitedMbpr.clear();
                 }
                 isRunning = true;
-                btnPlay.innerText = '⏸️ Pausar';
+                btnPlay.innerText = 'Pausar';
                 stepRace3();
             }
         };
@@ -507,13 +645,13 @@
 
             if (bDijk) { bDijk.className = 'car-badge badge-green'; bDijk.innerText = '🚗 Dijkstra'; }
             if (bBpr) { bBpr.className = 'car-badge badge-green'; bBpr.innerText = '🚙 BPR'; }
-            if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR 🏆'; }
+            if (bMbpr) { bMbpr.className = 'car-badge badge-green'; bMbpr.innerText = '🏎️ MBPR '; }
 
-            if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = '🟢 Pronto'; }
-            if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = '🟢 Pronto'; }
-            if (sMbpr) { sMbpr.style.color = '#4ade80'; sMbpr.innerText = '🟢 Pronto'; }
+            if (sDijk) { sDijk.style.color = '#4ade80'; sDijk.innerText = 'Pronto'; }
+            if (sBpr) { sBpr.style.color = '#4ade80'; sBpr.innerText = 'Pronto'; }
+            if (sMbpr) { sMbpr.style.color = '#4ade80'; sMbpr.innerText = 'Pronto'; }
 
-            btnPlay.innerText = '▶️ Iniciar Simulação dos 3';
+            btnPlay.innerText = 'Iniciar Simulação dos 3';
         };
     </script>
 </body>

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulação: Rota Dijkstra (Aracaju ➔ UFS)</title>
+    <title>Simulação: Rota Dijkstra (Aracaju -> UFS)</title>
     <!-- Leaflet CSS & JS Oficiais (CDN cdnjs) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
@@ -188,6 +188,144 @@
             line-height: 1;
             filter: drop-shadow(0 4px 6px rgba(0,0,0,0.6));
         }
+    
+        /* ================= Tema retro Windows 95 ================= */
+        html, body {
+            font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+            background: #008080 !important;
+        }
+        .hud-painel {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+            padding: 3px 3px 10px 3px !important;
+            font-size: 12px !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 4px 4px 0 rgba(0,0,0,0.45) !important;
+        }
+        .hud-painel, .hud-painel * { color: #000 !important; }
+        .hud-painel > *:not(.hud-titulo) {
+            margin-left: 8px !important;
+            margin-right: 8px !important;
+        }
+        .hud-painel .hud-titulo {
+            background: linear-gradient(90deg, #000080, #1084d0) !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            padding: 4px 6px !important;
+            margin: 0 0 10px 0 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hud-painel .hud-titulo, .hud-painel .hud-titulo * { color: #fff !important; }
+        .hud-caixa, .card-rota {
+            background: #fff !important;
+            border-radius: 0 !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-caixa { border: none !important; padding: 6px 10px !important; }
+        .card-rota { border-left-width: 10px !important; padding: 8px 12px 8px 10px !important; }
+        .hud-caixa .label {
+            text-transform: none !important;
+            font-size: 11px !important;
+            font-weight: normal !important;
+        }
+        .hud-caixa .valor, .card-rota > div:last-child {
+            font-family: "Courier New", Courier, monospace !important;
+            font-weight: bold !important;
+        }
+        .hud-btn {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            padding: 6px 16px !important;
+            min-width: 84px;
+            justify-content: center;
+            transform: none !important;
+            transition: none !important;
+            cursor: default !important;
+        }
+        #btn-play { font-weight: bold !important; outline: 1px solid #000; }
+        .hud-btn:hover { background: #c0c0c0 !important; transform: none !important; }
+        .hud-btn:active {
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            padding: 7px 15px 5px 17px !important;
+        }
+        .hud-btn:focus-visible { outline: 1px dotted #000 !important; outline-offset: -5px; }
+        .hud-select {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            padding: 5px 6px !important;
+        }
+        .hud-progresso {
+            width: auto !important;
+            height: 20px !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+            padding: 3px !important;
+            box-shadow: inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf !important;
+        }
+        .hud-barra {
+            background: repeating-linear-gradient(90deg, #000080 0 9px, transparent 9px 11px) !important;
+        }
+        .legenda-trafego .dot { border-radius: 0 !important; border: 1px solid #000; }
+        .explicacao-mbpr {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        /* Etiqueta em cima dos carros */
+        .car-badge {
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.5) !important;
+            transition: none !important;
+        }
+        .badge-green { background: #008000 !important; color: #fff !important; animation: none !important; }
+        .badge-yellow { background: #ffff00 !important; color: #000 !important; animation: none !important; }
+        .badge-red { background: #ff0000 !important; color: #fff !important; animation: piscaRetro 0.8s steps(2, start) infinite !important; }
+        @keyframes piscaRetro { to { visibility: hidden; } }
+        /* Controles do Leaflet */
+        .leaflet-bar, .leaflet-control-layers, .leaflet-popup-content-wrapper {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf, 3px 3px 0 rgba(0,0,0,0.4) !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-bar a {
+            background: #c0c0c0 !important;
+            color: #000 !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #808080 !important;
+        }
+        .leaflet-popup-tip { background: #c0c0c0 !important; }
+        .leaflet-tooltip {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-control-attribution { background: #c0c0c0 !important; }
     </style>
 </head>
 <body>
@@ -196,7 +334,7 @@
     <div class="hud-painel">
         <div class="hud-titulo">
             <span>🚗 SIMULAÇÃO: DIJKSTRA</span>
-            <span style="font-size: 13px; color: #94a3b8;">10.69 km</span>
+            <span style="font-size: 13px; color: #94a3b8;">9.32 km</span>
         </div>
         
         <div class="hud-metricas">
@@ -206,12 +344,12 @@
             </div>
             <div class="hud-caixa">
                 <div class="label">Semáforos na Rota</div>
-                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / 1 🛑</div>
+                <div class="valor" id="sem-atual" style="color: #ef4444;">0 / 2 </div>
             </div>
             <div class="hud-caixa" style="grid-column: span 2;">
                 <div class="label">Status do Veículo</div>
                 <div class="valor" id="status-veiculo" style="font-size: 13px; color: #4ade80;">
-                    🟢 Pronto para iniciar
+                    Pronto para iniciar
                 </div>
             </div>
             <div class="hud-caixa" style="grid-column: span 2;">
@@ -223,8 +361,8 @@
         </div>
 
         <div class="hud-controles">
-            <button class="hud-btn" id="btn-play">▶️ Iniciar</button>
-            <button class="hud-btn hud-btn-reset" id="btn-reset">🔄 Reset</button>
+            <button class="hud-btn" id="btn-play">Iniciar</button>
+            <button class="hud-btn hud-btn-reset" id="btn-reset">Reset</button>
             <select class="hud-select" id="sel-vel">
                 <option value="1">1x</option>
                 <option value="3" selected>3x</option>
@@ -239,16 +377,16 @@
     </div>
 
     <script>
-        var coords = [[-10.946093350002837, -37.05120046039128], [-10.9445139, -37.051154], [-10.9530168, -37.0522668], [-10.9548466, -37.0535293], [-10.9547793, -37.0536845], [-10.9545357, -37.0540332], [-10.9540593, -37.0547479], [-10.953682, -37.0552889], [-10.9533495, -37.055824], [-10.9530816, -37.0563748], [-10.952996, -37.0565643], [-10.952733, -37.0573205], [-10.9525273, -37.0581387], [-10.9523956, -37.0588146], [-10.9517935, -37.0621417], [-10.9517144, -37.0625269], [-10.9514589, -37.0638716], [-10.9514447, -37.0639631], [-10.9513154, -37.0646813], [-10.9504959, -37.0686313], [-10.9485422, -37.071723], [-10.9474948, -37.0727869], [-10.9471242, -37.0731277], [-10.9457621, -37.0744526], [-10.9454397, -37.0747701], [-10.9447663, -37.075453], [-10.9446108, -37.0756107], [-10.9422321, -37.0779553], [-10.9422676, -37.0774412], [-10.9429868, -37.0772732], [-10.9431648, -37.0781211], [-10.9431381, -37.0782073], [-10.9430606, -37.0786082], [-10.942382, -37.0792864], [-10.941892, -37.0797729], [-10.9418528, -37.0798853], [-10.9419104, -37.0801025], [-10.9419655, -37.0803105], [-10.9422893, -37.0816342], [-10.9425451, -37.0826303], [-10.942653, -37.0830702], [-10.9430244, -37.0845064], [-10.9431711, -37.0851078], [-10.9431798, -37.085142], [-10.9435131, -37.0864493], [-10.9429315, -37.0865803], [-10.9424154, -37.0868722], [-10.9419573, -37.0875244], [-10.9418397, -37.0875369], [-10.9415341, -37.0875015], [-10.9403068, -37.0875509], [-10.9403218, -37.0886139], [-10.9372161, -37.0895161], [-10.9343357, -37.0901781], [-10.9342907, -37.090341], [-10.9347979, -37.0918875], [-10.9341971, -37.0940056], [-10.9341735, -37.0943083], [-10.936016, -37.0986368], [-10.936121, -37.0993526], [-10.9360587, -37.0998797], [-10.9359077, -37.100122], [-10.9357784, -37.1002632], [-10.9354732, -37.1005966], [-10.9351447, -37.1009251], [-10.9346665, -37.1012618], [-10.9341784, -37.1014938], [-10.9338891, -37.1017654], [-10.9338404, -37.1023998], [-10.9337741, -37.1029314], [-10.9337406, -37.1032094], [-10.9337091, -37.10347], [-10.9336741, -37.1037957], [-10.9336508, -37.1039991], [-10.9333368, -37.1057171], [-10.933053, -37.1057352], [-10.93308, -37.1063092], [-10.9330701, -37.1068527], [-10.9330685, -37.10743], [-10.9330655, -37.1080285], [-10.9325177, -37.1080144], [-10.9326073, -37.1089324], [-10.9305734, -37.1102109], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
-        var vias = ["Avenida Paulo Barreto de Menezes", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Via sem nome", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Rua Professor Henrique de Souza", "Rua Professor Henrique de Souza", "Via sem nome", "Via sem nome", "Rua Ant\u00f4nio Valdione de S\u00e1", "Rua Cinco", "Rua Luiz Ant\u00f4nio Silveira Teixeira", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua F", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua B", "Rua I", "Rua A", "Avenida Chesf", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas"];
-        var semaforos = [{"lat": -10.9445139, "lon": -37.051154, "node": "7233527361"}, {"lat": -10.941892, "lon": -37.0797729, "node": "939897250"}];
-        var paradas = new Set([34]);
-        var totalDistKm = 10.690451253309313;
-        var totalTempoMin = 15.287142211246142;
+        var coords = [[-10.987693832505258, -37.071165206404004], [-10.9876, -37.0695], [-10.9873, -37.0665], [-10.9868, -37.0628], [-10.9862, -37.0601], [-10.98565, -37.0588], [-10.9835, -37.0604], [-10.9805, -37.0632], [-10.9772, -37.0667], [-10.974, -37.0698], [-10.9708, -37.0728], [-10.9675, -37.0758], [-10.9644102, -37.0783981], [-10.9640646, -37.0781858], [-10.9636255, -37.0779068], [-10.963308, -37.0776943], [-10.9630921, -37.0775498], [-10.9626826, -37.0773943], [-10.962339, -37.0773514], [-10.9618834, -37.0772869], [-10.9615615, -37.07726], [-10.961136, -37.0772131], [-10.9606293, -37.0771408], [-10.9602601, -37.0770975], [-10.9595155, -37.0770155], [-10.9529636, -37.0760071], [-10.9507966, -37.0750493], [-10.9493516, -37.0742995], [-10.9481644, -37.0735353], [-10.9476643, -37.0732434], [-10.9475568, -37.0731548], [-10.9472087, -37.0728073], [-10.9474948, -37.0727869], [-10.9471242, -37.0731277], [-10.9457621, -37.0744526], [-10.9454397, -37.0747701], [-10.9447663, -37.075453], [-10.9446108, -37.0756107], [-10.9422321, -37.0779553], [-10.9422676, -37.0774412], [-10.9429868, -37.0772732], [-10.9431648, -37.0781211], [-10.9431381, -37.0782073], [-10.9430606, -37.0786082], [-10.942382, -37.0792864], [-10.941892, -37.0797729], [-10.9418528, -37.0798853], [-10.9419104, -37.0801025], [-10.9419655, -37.0803105], [-10.9422893, -37.0816342], [-10.9425451, -37.0826303], [-10.942653, -37.0830702], [-10.9430244, -37.0845064], [-10.9431711, -37.0851078], [-10.9431798, -37.085142], [-10.9435131, -37.0864493], [-10.9429315, -37.0865803], [-10.9424154, -37.0868722], [-10.9419573, -37.0875244], [-10.9418397, -37.0875369], [-10.9415341, -37.0875015], [-10.9403068, -37.0875509], [-10.9403218, -37.0886139], [-10.9372161, -37.0895161], [-10.9343357, -37.0901781], [-10.9342907, -37.090341], [-10.9347979, -37.0918875], [-10.9341971, -37.0940056], [-10.9341735, -37.0943083], [-10.936016, -37.0986368], [-10.936121, -37.0993526], [-10.9360587, -37.0998797], [-10.9359077, -37.100122], [-10.9357784, -37.1002632], [-10.9354732, -37.1005966], [-10.9351447, -37.1009251], [-10.9346665, -37.1012618], [-10.9341784, -37.1014938], [-10.9338891, -37.1017654], [-10.9338404, -37.1023998], [-10.9337741, -37.1029314], [-10.9337406, -37.1032094], [-10.9337091, -37.10347], [-10.9336741, -37.1037957], [-10.9336508, -37.1039991], [-10.9333368, -37.1057171], [-10.933053, -37.1057352], [-10.93308, -37.1063092], [-10.9330701, -37.1068527], [-10.9330685, -37.10743], [-10.9330655, -37.1080285], [-10.9325177, -37.1080144], [-10.9326073, -37.1089324], [-10.9305734, -37.1102109], [-10.9301755, -37.1102825], [-10.9298374, -37.1098711], [-10.9289338, -37.1089969], [-10.9281366, -37.1072715], [-10.9251921, -37.1049681]];
+        var vias = ["Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Avenida Empres\u00e1rio Jos\u00e9 Carlos Silva", "Via sem nome", "Via sem nome", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Avenida Presidente Tancredo Neves", "Via sem nome", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Avenida Augusto Franco", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Rua Major Jo\u00e3o Teles", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Avenida Farmaceutica Cezartina R\u00e9gis", "Rua Professor Henrique de Souza", "Rua Professor Henrique de Souza", "Via sem nome", "Via sem nome", "Rua Ant\u00f4nio Valdione de S\u00e1", "Rua Cinco", "Rua Luiz Ant\u00f4nio Silveira Teixeira", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Rua Jasiel de Brito Cort\u00eas", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua F", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Avenida Jos\u00e9 Correia Santos Neto", "Rua B", "Rua I", "Rua A", "Avenida Chesf", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas", "Avenida Governador Marcelo D\u00e9da Chagas"];
+        var semaforos = [{"lat": -10.9507966, "lon": -37.0750493, "node": "979849532"}, {"lat": -10.941892, "lon": -37.0797729, "node": "939897250"}];
+        var paradas = new Set([26, 45]);
+        var totalDistKm = 9.318079591438547;
+        var totalTempoMin = 14.16312590205933;
 
         // 1. Inicializar Mapa Leaflet
         var map = L.map('map', {
-            center: [-10.941186243750032, -37.08435597227717],
+            center: [-10.947090627601062, -37.086060615216205],
             zoom: 13,
             zoomControl: true
         });
@@ -271,9 +409,9 @@
         });
 
         L.control.layers({
-            "🗺️ Mapa de Ruas (Esri)": mapaRuas,
-            "🛰️ Imagem de Satélite": mapaSatelite,
-            "🏙️ Mapa Carto": mapaCarto
+            "Mapa de Ruas (Esri)": mapaRuas,
+            "Imagem de Satélite": mapaSatelite,
+            "Mapa Carto": mapaCarto
         }, null, { position: 'topright' }).addTo(map);
 
         // 3. Traçado da Rota com Classe CSS Animada
@@ -294,7 +432,7 @@
                 fillColor: '#ef4444',
                 fillOpacity: 0.85,
                 weight: 2
-            }).addTo(map).bindTooltip('🚦 Semáforo (Cruzamento ' + sem.node + ')');
+            }).addTo(map).bindTooltip('Semáforo (Cruzamento ' + sem.node + ')');
         });
 
         // 5. Marcador Origem (Ponto A)
@@ -304,12 +442,12 @@
             iconSize: [34, 34],
             iconAnchor: [17, 17]
         });
-        L.marker(coords[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Ponto A (Origem):</b><br>Parque da Sementeira (Av. Beira Mar / 13 de Julho)');
+        L.marker(coords[0], { icon: iconOrigem }).addTo(map).bindPopup('<b>Ponto A (Origem):</b><br>Aeroporto Internacional de Aracaju (Santa Maria)');
 
         // 6. Marcador Destino (UFS)
         var iconDestino = L.divIcon({
             className: 'custom-pin',
-            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">🎓</div>',
+            html: '<div style="background:#ef4444; color:#fff; border-radius:50%; width:34px; height:34px; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:18px; box-shadow:0 3px 8px rgba(0,0,0,0.5); border:2px solid #fff;">B</div>',
             iconSize: [34, 34],
             iconAnchor: [17, 17]
         });
@@ -318,7 +456,7 @@
         // 7. Veículo Animado com Badge Dinâmico de Semáforo
         var carIcon = L.divIcon({
             className: 'custom-car-div',
-            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">🟢 Pronto</div><div class="car-icon-body">🚗</div></div>',
+            html: '<div class="car-marker-container"><div id="car-badge" class="car-badge badge-green">Pronto</div><div class="car-icon-body">🚗</div></div>',
             iconSize: [0, 0]
         });
         var carMarker = L.marker(coords[0], { icon: carIcon, zIndexOffset: 1000 }).addTo(map);
@@ -351,30 +489,30 @@
                 if (waitTicks === 1) {
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-yellow';
-                        carBadge.innerText = '🟡 Abrindo...';
+                        carBadge.innerText = 'Abrindo...';
                     }
                     statusVeiculo.style.color = '#fde047';
-                    statusVeiculo.innerText = '🟡 Semáforo abrindo... Atenção!';
+                    statusVeiculo.innerText = 'Semáforo abrindo... Atenção!';
                 } else {
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-red';
-                        carBadge.innerText = '🛑 Sinal Vermelho';
+                        carBadge.innerText = 'Sinal Vermelho';
                     }
                     statusVeiculo.style.color = '#f87171';
-                    statusVeiculo.innerText = '🛑 Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
+                    statusVeiculo.innerText = 'Parado no semáforo (' + paradasFeitas + '/' + paradas.size + ') - Sinal Vermelho';
                 }
             } else if (paradas.has(currentIndex) && !visitados.has(currentIndex)) {
                 // Chegou em um semáforo: inicia tempo de parada
                 visitados.add(currentIndex);
                 paradasFeitas++;
                 waitTicks = 10;
-                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' 🛑';
+                semAtual.innerText = paradasFeitas + ' / ' + paradas.size + ' ';
                 if (carBadge) {
                     carBadge.className = 'car-badge badge-red';
-                    carBadge.innerText = '🛑 Sinal Vermelho';
+                    carBadge.innerText = 'Sinal Vermelho';
                 }
                 statusVeiculo.style.color = '#f87171';
-                statusVeiculo.innerText = '🛑 Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
+                statusVeiculo.innerText = 'Parada em Semáforo (' + paradasFeitas + '/' + paradas.size + ') - Aguardando Verde!';
             } else {
                 // Avanço normal de rota
                 if (currentIndex < coords.length - 1) {
@@ -384,10 +522,10 @@
 
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-green';
-                        carBadge.innerText = '🟢 Em movimento';
+                        carBadge.innerText = 'Em movimento';
                     }
                     statusVeiculo.style.color = '#4ade80';
-                    statusVeiculo.innerText = '🟢 Em movimento (Fluxo normal)';
+                    statusVeiculo.innerText = 'Em movimento (Fluxo normal)';
 
                     var pct = (currentIndex / (coords.length - 1)) * 100;
                     hudBarra.style.width = pct + '%';
@@ -400,13 +538,13 @@
                     }
                 } else {
                     isRunning = false;
-                    btnPlay.innerText = '▶️ Reiniciar';
-                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) 🎓';
+                    btnPlay.innerText = 'Reiniciar';
+                    viaAtual.innerText = 'Chegada: UFS (Campus São Cristóvão) ';
                     statusVeiculo.style.color = '#38bdf8';
-                    statusVeiculo.innerText = '🏁 Chegou ao Destino (Campus UFS)!';
+                    statusVeiculo.innerText = 'Chegou ao Destino (Campus UFS)!';
                     if (carBadge) {
                         carBadge.className = 'car-badge badge-green';
-                        carBadge.innerText = '🏁 Chegou na UFS!';
+                        carBadge.innerText = 'Chegou na UFS!';
                     }
                     hudBarra.style.width = '100%';
                     return;
@@ -422,7 +560,7 @@
             if (isRunning) {
                 isRunning = false;
                 clearTimeout(timerId);
-                btnPlay.innerText = '▶️ Continuar';
+                btnPlay.innerText = 'Continuar';
             } else {
                 if (currentIndex >= coords.length - 1) {
                     currentIndex = 0;
@@ -431,7 +569,7 @@
                     paradasFeitas = 0;
                 }
                 isRunning = true;
-                btnPlay.innerText = '⏸️ Pausar';
+                btnPlay.innerText = 'Pausar';
                 step();
             }
         };
@@ -446,16 +584,16 @@
             carMarker.setLatLng(coords[0]);
             hudBarra.style.width = '0%';
             distAtual.innerText = '0.00 km';
-            semAtual.innerText = '0 / ' + paradas.size + ' 🛑';
+            semAtual.innerText = '0 / ' + paradas.size + ' ';
             viaAtual.innerText = 'Iniciando trajeto...';
             statusVeiculo.style.color = '#4ade80';
-            statusVeiculo.innerText = '🟢 Pronto para iniciar';
+            statusVeiculo.innerText = 'Pronto para iniciar';
             var carBadge = document.getElementById('car-badge');
             if (carBadge) {
                 carBadge.className = 'car-badge badge-green';
-                carBadge.innerText = '🟢 Pronto';
+                carBadge.innerText = 'Pronto';
             }
-            btnPlay.innerText = '▶️ Iniciar';
+            btnPlay.innerText = 'Iniciar';
         };
     </script>
 </body>

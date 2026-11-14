@@ -18,6 +18,176 @@ UFS_COORDS = (-10.9251921, -37.1049681)
 UFS_DEFAULT_NODE = "5556227911"
 UFS_NAME = "Universidade Federal de Sergipe (UFS - São Cristóvão)"
 
+
+# ---------------------------------------------------------------------------
+# Tema retro "Windows 95" para as paginas de simulacao
+# (os icones dos carros sao mantidos; os demais emojis sao removidos)
+# ---------------------------------------------------------------------------
+_W95_ALTO = "inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf"
+_W95_BAIXO = "inset 1px 1px #808080, inset -1px -1px #fff, inset 2px 2px #000, inset -2px -2px #dfdfdf"
+
+ESTILO_RETRO_CSS = """
+        /* ================= Tema retro Windows 95 ================= */
+        html, body {
+            font-family: "MS Sans Serif", "Microsoft Sans Serif", Tahoma, Arial, sans-serif !important;
+            background: #008080 !important;
+        }
+        .hud-painel {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            backdrop-filter: none !important;
+            padding: 3px 3px 10px 3px !important;
+            font-size: 12px !important;
+            box-shadow: W95ALTO, 4px 4px 0 rgba(0,0,0,0.45) !important;
+        }
+        .hud-painel, .hud-painel * { color: #000 !important; }
+        .hud-painel > *:not(.hud-titulo) {
+            margin-left: 8px !important;
+            margin-right: 8px !important;
+        }
+        .hud-painel .hud-titulo {
+            background: linear-gradient(90deg, #000080, #1084d0) !important;
+            font-size: 12px !important;
+            font-weight: bold !important;
+            padding: 4px 6px !important;
+            margin: 0 0 10px 0 !important;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .hud-painel .hud-titulo, .hud-painel .hud-titulo * { color: #fff !important; }
+        .hud-caixa, .card-rota {
+            background: #fff !important;
+            border-radius: 0 !important;
+            border-top: none !important;
+            border-right: none !important;
+            border-bottom: none !important;
+            box-shadow: W95BAIXO !important;
+        }
+        .hud-caixa { border: none !important; padding: 6px 10px !important; }
+        .card-rota { border-left-width: 10px !important; padding: 8px 12px 8px 10px !important; }
+        .hud-caixa .label {
+            text-transform: none !important;
+            font-size: 11px !important;
+            font-weight: normal !important;
+        }
+        .hud-caixa .valor, .card-rota > div:last-child {
+            font-family: "Courier New", Courier, monospace !important;
+            font-weight: bold !important;
+        }
+        .hud-btn {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: W95ALTO !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            font-weight: normal !important;
+            padding: 6px 16px !important;
+            min-width: 84px;
+            justify-content: center;
+            transform: none !important;
+            transition: none !important;
+            cursor: default !important;
+        }
+        #btn-play { font-weight: bold !important; outline: 1px solid #000; }
+        .hud-btn:hover { background: #c0c0c0 !important; transform: none !important; }
+        .hud-btn:active {
+            box-shadow: W95BAIXO !important;
+            padding: 7px 15px 5px 17px !important;
+        }
+        .hud-btn:focus-visible { outline: 1px dotted #000 !important; outline-offset: -5px; }
+        .hud-select {
+            background: #fff !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: W95BAIXO !important;
+            font-family: inherit !important;
+            font-size: 12px !important;
+            padding: 5px 6px !important;
+        }
+        .hud-progresso {
+            width: auto !important;
+            height: 20px !important;
+            background: #fff !important;
+            border-radius: 0 !important;
+            padding: 3px !important;
+            box-shadow: W95BAIXO !important;
+        }
+        .hud-barra {
+            background: repeating-linear-gradient(90deg, #000080 0 9px, transparent 9px 11px) !important;
+        }
+        .legenda-trafego .dot { border-radius: 0 !important; border: 1px solid #000; }
+        .explicacao-mbpr {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        /* Etiqueta em cima dos carros */
+        .car-badge {
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+            font-size: 11px !important;
+            font-weight: bold !important;
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.5) !important;
+            transition: none !important;
+        }
+        .badge-green { background: #008000 !important; color: #fff !important; animation: none !important; }
+        .badge-yellow { background: #ffff00 !important; color: #000 !important; animation: none !important; }
+        .badge-red { background: #ff0000 !important; color: #fff !important; animation: piscaRetro 0.8s steps(2, start) infinite !important; }
+        @keyframes piscaRetro { to { visibility: hidden; } }
+        /* Controles do Leaflet */
+        .leaflet-bar, .leaflet-control-layers, .leaflet-popup-content-wrapper {
+            background: #c0c0c0 !important;
+            border: none !important;
+            border-radius: 0 !important;
+            box-shadow: W95ALTO, 3px 3px 0 rgba(0,0,0,0.4) !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-bar a {
+            background: #c0c0c0 !important;
+            color: #000 !important;
+            border-radius: 0 !important;
+            border-bottom: 1px solid #808080 !important;
+        }
+        .leaflet-popup-tip { background: #c0c0c0 !important; }
+        .leaflet-tooltip {
+            background: #ffffe1 !important;
+            border: 1px solid #000 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            color: #000 !important;
+            font-family: "MS Sans Serif", Tahoma, Arial, sans-serif !important;
+        }
+        .leaflet-control-attribution { background: #c0c0c0 !important; }
+""".replace("W95ALTO", _W95_ALTO).replace("W95BAIXO", _W95_BAIXO)
+
+_CARROS = {"\U0001F697", "\U0001F699", "\U0001F3CE"}
+_TROCAS_RETRO = [
+    ("➔", "->"),                          # seta
+    ("\U0001F3C6 Vencedor UFS!", "Vencedor!"),
+    (">\U0001F393<", ">B<"),                   # pino do destino vira "B"
+]
+_RE_EMOJI = re.compile(
+    "([\U0001F000-\U0001FAFF☀-➿⬀-⯿⏩-⏺▶◀])️? ?")
+
+
+def _aplicar_estilo_retro(html):
+    """Aplica o tema Windows 95 e remove os emojis, exceto os dos carros."""
+    for de, para in _TROCAS_RETRO:
+        html = html.replace(de, para)
+
+    def _limpar(m):
+        return m.group(0) if m.group(1) in _CARROS else ""
+
+    html = _RE_EMOJI.sub(_limpar, html)
+    html = html.replace("</style>", ESTILO_RETRO_CSS + "    </style>", 1)
+    return html
+
 # Pontos Notáveis de Aracaju (Pontos A pré-configurados para escolha rápida)
 # As coords refletem as coordenadas reais dos nós e acessos na malha viária (y=lat, x=lon)
 PONTOS_NOTAVEIS = {
@@ -1105,7 +1275,7 @@ def gerar_simulacao_dijkstra_html(G, caminho, metricas, nome_origem, arquivo_sai
 </html>
 """
     with open(arquivo_saida, "w", encoding="utf-8") as f:
-        f.write(html_content)
+        f.write(_aplicar_estilo_retro(html_content))
     print(f"[+] Mapa e Simulação Dijkstra gerados com sucesso: {os.path.abspath(arquivo_saida)}")
     return arquivo_saida
 
@@ -1604,7 +1774,7 @@ def gerar_simulacao_bpr_html(G, caminho_dijkstra, metricas_dijkstra,
 </html>
 """
     with open(arquivo_saida, "w", encoding="utf-8") as f:
-        f.write(html_content)
+        f.write(_aplicar_estilo_retro(html_content))
     print(f"[+] Mapa e Simulação BPR gerados com sucesso: {os.path.abspath(arquivo_saida)}")
     return arquivo_saida
 
@@ -2169,7 +2339,7 @@ def gerar_simulacao_mbpr_html(G, caminho_dijkstra, metricas_dijkstra,
 </html>
 """
     with open(arquivo_saida, "w", encoding="utf-8") as f:
-        f.write(html_content)
+        f.write(_aplicar_estilo_retro(html_content))
     print(f"[+] Mapa e Simulação MBPR gerados com sucesso: {os.path.abspath(arquivo_saida)}")
     return arquivo_saida
 
